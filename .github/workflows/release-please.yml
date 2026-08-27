@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to rebuild and upload (for example, v0.10.0)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -14,9 +19,83 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.release.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
+      tag_name: ${{ steps.release.outputs.tag_name || inputs.release_tag }}
     steps:
       - name: Update release pull request or create GitHub release
+        id: release
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.release_tag == '' }}
         uses: googleapis/release-please-action@0dfd8538845b8e92600d271a895a5372865d4062 # v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  publish-assets:
+    name: Build and upload release assets
+    needs: release-please
+    if: ${{ needs.release-please.outputs.should_publish == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+
+      - name: Run mapper tests
+        run: ./Scripts/test.sh
+
+      - name: Build Universal app and ZIP
+        run: ./Scripts/package_universal.sh
+
+      - name: Build designed Universal DMG
+        run: ./Scripts/package_dmg.sh
+        env:
+          CODEUSAGE_APP_PATH: ${{ github.workspace }}/dist-universal/CodeUsage.app
+          CODEUSAGE_OUTPUT_DIR: ${{ github.workspace }}/outputs
+
+      - name: Build source ZIP
+        run: ./Scripts/package_source.sh
+
+      - name: Verify release assets
+        shell: zsh {0}
+        env:
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION=$(/usr/bin/plutil -extract version raw -o - version.json)
+          EXPECTED_VERSION="${TAG_NAME#v}"
+          if [[ "$VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "Tag/version mismatch: $TAG_NAME vs $VERSION" >&2
+            exit 1
+          fi
+
+          APP="dist-universal/CodeUsage.app"
+          DMG="outputs/CodeUsage-$VERSION-macos-universal.dmg"
+          UNIVERSAL_ZIP="outputs/CodeUsage-$VERSION-macos-universal.zip"
+          SOURCE_ZIP="outputs/CodeUsage-$VERSION-source.zip"
+
+          /usr/bin/codesign --verify --deep --strict "$APP"
+          /usr/bin/lipo "$APP/Contents/MacOS/CodeUsage" \
+            -verify_arch arm64 x86_64
+          /usr/bin/hdiutil verify "$DMG"
+          /usr/bin/unzip -tqq "$UNIVERSAL_ZIP"
+          /usr/bin/unzip -tqq "$SOURCE_ZIP"
+
+      - name: Upload assets to GitHub Release
+        shell: zsh {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION=$(/usr/bin/plutil -extract version raw -o - version.json)
+          gh release upload "$TAG_NAME" \
+            "outputs/CodeUsage-$VERSION-macos-universal.dmg" \
+            "outputs/CodeUsage-$VERSION-macos-universal.zip" \
+            "outputs/CodeUsage-$VERSION-source.zip" \
+            --clobber
