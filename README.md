@@ -168,6 +168,7 @@ CodeUsage/
 ├── Assets/              # 应用图标、工具图标和 DMG 背景
 ├── Scripts/             # 测试、单架构、Universal、DMG 与源码打包脚本
 ├── outputs/             # 本地生成的发布包（不提交到 Git）
+├── LICENSE              # CodeUsage 专有源码可见许可证
 ├── Package.swift
 ├── README.md
 └── THIRD_PARTY_NOTICES.md
@@ -194,3 +195,9 @@ CodeUsage 只展示当前登录态能够可靠读取的数据。若服务端没�
 ## 第三方说明
 
 工具名称和单色标识仅用于识别对应服务。完整来源、许可和商标说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## 许可证
+
+CodeUsage 采用[专有源码可见许可证](LICENSE)，不是开源软件。
+
+允许用户免费下载、安装和使用由作者发布的官方未修改版本。未经作者书面授权，不得修改、二次开发、重新打包、再分发、销售或商业化，也不得将官方或修改后的版本上架任何应用商店、软件市场、包仓库或下载平台。第三方材料仍分别适用 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 中列明的许可条款。

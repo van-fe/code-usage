@@ -23,7 +23,7 @@ trap cleanup EXIT
 
 mkdir -p "$STAGING_DIR/Assets" "$OUTPUT_DIR"
 
-for file in Package.swift README.md THIRD_PARTY_NOTICES.md; do
+for file in LICENSE Package.swift README.md THIRD_PARTY_NOTICES.md; do
   /usr/bin/ditto "$PROJECT_DIR/$file" "$STAGING_DIR/$file"
 done
 
@@ -47,6 +47,7 @@ done
 
 pushd "$STAGING_DIR" >/dev/null
 /usr/bin/zip -qry -X "$TEMP_ZIP" \
+  LICENSE \
   Package.swift \
   README.md \
   THIRD_PARTY_NOTICES.md \

@@ -1,0 +1,101 @@
+CodeUsage Proprietary Source-Available License
+Version 1.0, 27 August 2026
+
+Copyright (c) 2026 van-fe. All rights reserved.
+
+This license applies to CodeUsage source code, official binaries, application
+bundles, documentation, and original assets (collectively, the "Software"),
+except for third-party materials identified in THIRD_PARTY_NOTICES.md.
+
+1. Permitted Use
+
+Subject to this license, the copyright holder (the "Licensor") grants you a
+limited, non-exclusive, non-transferable, non-sublicensable, royalty-free
+license to:
+
+  a. download an official, unmodified release of the Software from the
+     Licensor's repository or another distribution channel designated by the
+     Licensor (an "Official Release"); and
+
+  b. install and run that Official Release, without modification, for your
+     personal or internal use.
+
+Internal use does not include providing the Software or its functionality to
+third parties as a product or service. You may view the publicly available
+source code solely for evaluation, security review, and personal reference.
+
+2. Restrictions
+
+Unless you first obtain the Licensor's express written permission, you may
+not, directly or indirectly:
+
+  a. modify, adapt, translate, build from, compile, or create derivative works
+     based on any part of the Software;
+
+  b. reverse engineer, decompile, or disassemble the Software, except only to
+     the extent that applicable law expressly permits such activity despite
+     this restriction;
+
+  c. copy, publish, mirror, redistribute, sublicense, sell, rent, lease,
+     monetize, commercially exploit, or otherwise make the Software or any
+     derivative work available to any third party;
+
+  d. upload, submit, list, offer, publish, or distribute the Software, whether
+     modified or unmodified and whether free of charge or paid, through any
+     application store, software marketplace, package repository, download
+     platform, or similar distribution service;
+
+  e. remove, obscure, or alter any copyright, license, attribution, trademark,
+     or other proprietary notice; or
+
+  f. use the Software's source code or original assets in another product,
+     project, or service.
+
+3. Commercial and Other Permissions
+
+The Licensor retains the exclusive right to develop, modify, distribute,
+license, and commercially exploit the Software. Any use outside Section 1,
+including commercial distribution, store publication, redistribution, or
+derivative development, requires a separate written agreement with the
+Licensor. Permission requests may be submitted to the owner of:
+
+https://github.com/van-fe/code-usage
+
+4. Third-Party Materials
+
+Third-party materials are governed by their respective licenses and notices,
+as described in THIRD_PARTY_NOTICES.md. This license does not limit any rights
+that those third-party licenses grant for those materials, and it grants no
+additional rights to them.
+
+5. Ownership
+
+The Software is licensed, not sold. The Licensor reserves all rights not
+expressly granted by this license. No trademark rights are granted.
+
+6. Termination
+
+Your rights under this license terminate automatically if you breach any of
+its terms. Upon termination, you must stop using the Software and delete all
+copies in your possession or control, except where retention is required by
+applicable law.
+
+7. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+NON-INFRINGEMENT.
+
+8. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR SHALL NOT BE
+LIABLE FOR ANY CLAIM, LOSS, OR DAMAGES, WHETHER DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, CONSEQUENTIAL, OR OTHERWISE, ARISING FROM OR RELATED TO THE SOFTWARE
+OR THIS LICENSE.
+
+9. Severability
+
+If any provision of this license is held unenforceable, the remaining
+provisions remain in effect, and the affected provision shall be enforced to
+the maximum extent permitted by applicable law.
