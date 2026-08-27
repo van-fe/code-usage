@@ -314,10 +314,11 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
 
         for (index, provider) in providers.enumerated() {
             x += groupSpacing
+            let logoDrawSize = providerLogoSize * ProviderIconMetrics.visualScale(for: provider)
             draw(
                 providerLogoImage(provider, size: providerLogoSize),
-                atX: x,
-                size: providerLogoSize,
+                atX: x - (logoDrawSize - providerLogoSize) / 2,
+                size: logoDrawSize,
                 canvasHeight: height
             )
             x += providerLogoSize + valueSpacing

@@ -1624,6 +1624,7 @@ struct ProviderAppIcon: View {
             }
         }
         .frame(width: size, height: size)
+        .scaleEffect(ProviderIconMetrics.visualScale(for: provider))
         .foregroundStyle(.primary)
         .accessibilityHidden(true)
     }
