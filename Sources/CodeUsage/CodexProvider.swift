@@ -87,8 +87,8 @@ actor CodexProvider {
                     send(["id": 2, "method": "account/rateLimits/read"])
                 } else if id.intValue == 2 {
                     if let error = object["error"] as? [String: Any] {
-                        finish(nil, error: UsageError.requestFailed(
-                            error["message"] as? String ?? "Codex 用量请求失败"
+                        finish(nil, error: requestFailure(
+                            message: error["message"] as? String ?? "Codex 用量请求失败"
                         ))
                     } else {
                         finish(object, error: nil)
@@ -111,7 +111,9 @@ actor CodexProvider {
                 "clientInfo": [
                     "name": "code-usage-menubar",
                     "title": "CodeUsage",
-                    "version": "0.8.1"
+                    "version": Bundle.main.object(
+                        forInfoDictionaryKey: "CFBundleShortVersionString"
+                    ) as? String ?? "development"
                 ],
                 "capabilities": ["experimentalApi": true]
             ]
@@ -231,6 +233,20 @@ actor CodexProvider {
             note: noteParts.isEmpty ? nil : noteParts.joined(separator: " · "),
             subscriptionCategory: .inferred(from: plan)
         )
+    }
+
+    static func requestFailure(message: String) -> UsageError {
+        let searchable = message.lowercased()
+        if searchable.contains("not logged in") ||
+            searchable.contains("not signed in") ||
+            searchable.contains("login") ||
+            searchable.contains("sign in") ||
+            searchable.contains("unauthorized") ||
+            searchable.contains("auth") ||
+            searchable.contains("credential") {
+            return .notSignedIn("Codex 尚未登录或登录已过期")
+        }
+        return .requestFailed(message)
     }
 
     private static func windowID(minutes: Double?, index: Int) -> String {

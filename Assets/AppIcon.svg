@@ -1,0 +1,38 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g id="codeusage-ai-dashboard-logo">
+    <g id="Background">
+      <path d="M758 56H266C150.02 56 56 150.02 56 266V758C56 873.98 150.02 968 266 968H758C873.98 968 968 873.98 968 758V266C968 150.02 873.98 56 758 56Z" fill="url(#background)"/>
+      <path d="M758 60H266C152.229 60 60 152.229 60 266V758C60 871.771 152.229 964 266 964H758C871.771 964 964 871.771 964 758V266C964 152.229 871.771 60 758 60Z" stroke="white" stroke-opacity="0.15" stroke-width="8"/>
+    </g>
+
+    <path d="M572 797.829C552.635 801.874 532.566 804 512 804C350.733 804 220 673.267 220 512C220 350.733 350.733 220 512 220C673.267 220 804 350.733 804 512C804 532.212 801.946 551.944 798.036 571" stroke="white" stroke-opacity="0.94" stroke-width="46" stroke-linecap="round"/>
+
+    <g fill="white" fill-opacity="0.94">
+      <circle cx="379" cy="379" r="20"/>
+      <circle cx="324" cy="512" r="20"/>
+      <circle cx="379" cy="645" r="20"/>
+      <circle cx="512" cy="700" r="20"/>
+      <circle cx="645" cy="645" r="20"/>
+      <circle cx="700" cy="512" r="20"/>
+      <circle cx="645" cy="379" r="20"/>
+    </g>
+
+    <g>
+      <path d="M512 512L669 355" stroke="url(#needle)" stroke-width="52" stroke-linecap="round"/>
+      <circle cx="512" cy="512" r="42" fill="white" fill-opacity="0.96"/>
+    </g>
+
+    <path d="M619.5 852L683.72 684.56H735.46L799.68 852H748.72L734.68 816.38H684.24L670.46 852H619.5ZM690.74 781.28H728.18L709.46 732.14L690.74 781.28ZM817.923 852V684.56H866.803V852H817.923Z" fill="white"/>
+  </g>
+
+  <defs>
+    <linearGradient id="background" x1="132" y1="112" x2="884" y2="916" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A3C41"/>
+      <stop offset="1" stop-color="#13151A"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="512" y1="512" x2="669" y2="355" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="white" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+</svg>

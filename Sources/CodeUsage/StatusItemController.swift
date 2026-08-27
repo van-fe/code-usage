@@ -340,7 +340,15 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func appLogoImage(size: CGFloat) -> NSImage? {
-        NSImage(
+        if let url = Bundle.main.resourceURL?
+            .appendingPathComponent("statusbar-logo.svg"),
+           let image = NSImage(contentsOf: url) {
+            image.size = NSSize(width: size, height: size)
+            image.isTemplate = true
+            return image
+        }
+
+        return NSImage(
             systemSymbolName: "gauge.with.dots.needle.67percent",
             accessibilityDescription: "CodeUsage"
         )?.withSymbolConfiguration(

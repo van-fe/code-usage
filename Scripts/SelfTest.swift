@@ -6,6 +6,9 @@ struct SelfTest {
     static func main() throws {
         try codexSelectsWeeklyWindow()
         try codexMapsWorkspaceLimits()
+        usageErrorsIdentifySignInFailures()
+        codexIdentifiesSignInFailures()
+        providerArchiveRoundTripsKnownProviders()
         try cursorMapsReportedMetrics()
         try cursorCalculatesTotalWhenMissing()
         try cursorMapsOnDemandUsage()
@@ -14,6 +17,7 @@ struct SelfTest {
         try cursorMapsSpendWithoutPlanUsage()
         try cursorLabelsPersonalAndTeamUsage()
         try claudeMapsWeeklyAndSessionWindows()
+        kiroParsesCLIAuthRows()
         try kiroMapsPreciseCreditsAndExtras()
         try kiroFallsBackToLegacyLimits()
         try kiroRejectsMissingQuota()
@@ -91,6 +95,24 @@ struct SelfTest {
             preconditionFailure("Expected workspace credits quantity")
         }
         precondition(balance == 1200.5)
+    }
+
+    private static func usageErrorsIdentifySignInFailures() {
+        precondition(UsageError.notSignedIn("login").requiresSignIn)
+        precondition(!UsageError.requestFailed("network").requiresSignIn)
+    }
+
+    private static func codexIdentifiesSignInFailures() {
+        let authFailure = CodexProvider.requestFailure(message: "Login required")
+        precondition(authFailure.requiresSignIn)
+        let networkFailure = CodexProvider.requestFailure(message: "Connection reset")
+        precondition(!networkFailure.requiresSignIn)
+    }
+
+    private static func providerArchiveRoundTripsKnownProviders() {
+        let decoded = ProviderArchive.decode(["qoder", "codex", "removed-provider"])
+        precondition(decoded == Set([.codex, .qoder]))
+        precondition(ProviderArchive.encode(decoded) == ["codex", "qoder"])
     }
 
     private static func cursorMapsReportedMetrics() throws {
@@ -386,6 +408,15 @@ struct SelfTest {
             preconditionFailure("Expected Kiro Add-on quantity")
         }
         precondition(used == 5 && limit == 100)
+    }
+
+    private static func kiroParsesCLIAuthRows() {
+        let output = "kirocli:social:token|7B226163636573735F746F6B656E223A2274227D\n"
+        let rows = KiroProvider.parseCLIAuthRows(output)
+        precondition(rows.count == 1)
+        precondition(rows[0].key == "kirocli:social:token")
+        let object = try? JSONSerialization.jsonObject(with: rows[0].data) as? [String: String]
+        precondition(object?["access_token"] == "t")
     }
 
     private static func kiroFallsBackToLegacyLimits() throws {

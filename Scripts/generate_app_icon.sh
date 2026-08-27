@@ -2,6 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="${0:A:h:h}"
+SOURCE_SVG="$PROJECT_DIR/Assets/AppIcon.svg"
 SOURCE_PNG="$PROJECT_DIR/Assets/AppIcon-1024.png"
 WORK_DIR=$(mktemp -d "${TMPDIR%/}/CodeUsageIcon.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT
@@ -14,7 +15,9 @@ SWIFT_ARGS=(-module-cache-path "$MODULE_CACHE_DIR")
 if [[ -n "${CODEUSAGE_SDK_PATH:-}" ]]; then
   SWIFT_ARGS+=(-sdk "$CODEUSAGE_SDK_PATH")
 fi
-swift "${SWIFT_ARGS[@]}" "$PROJECT_DIR/Scripts/generate_app_icon.swift" "$SOURCE_PNG"
+swift "${SWIFT_ARGS[@]}" "$PROJECT_DIR/Scripts/generate_app_icon.swift" \
+  "$SOURCE_SVG" \
+  "$SOURCE_PNG"
 
 while read -r filename pixels; do
   sips -z "$pixels" "$pixels" "$SOURCE_PNG" --out "$ICONSET_DIR/$filename" >/dev/null

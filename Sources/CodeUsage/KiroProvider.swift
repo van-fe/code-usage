@@ -173,22 +173,24 @@ actor KiroProvider {
             "codewhisperer:odic:token"
         ]
         let quotedKeys = tokenKeys.map { "'\($0)'" }.joined(separator: ",")
-        let sql = "SELECT key || char(31) || hex(value) FROM auth_kv WHERE key IN (\(quotedKeys));"
+        // sqlite3's shell escapes ASCII control characters in query output on
+        // newer versions (for example, char(31) becomes the two bytes "^_").
+        // Use a printable delimiter that cannot occur in either a known key or
+        // the hexadecimal value so the CLI credential row remains parseable.
+        let sql = "SELECT key || '|' || hex(value) FROM auth_kv WHERE key IN (\(quotedKeys));"
         guard let result = try? ProcessUtils.run(
             executable: "/usr/bin/sqlite3",
             arguments: ["-readonly", databasePath, sql],
             timeout: 5
         ), result.status == 0 else { return [] }
 
-        let rows = result.stdout.split(whereSeparator: \Character.isNewline)
         var parsedByKey: [String: KiroAuth] = [:]
-        for row in rows {
-            let columns = row.split(separator: "\u{1F}", maxSplits: 1, omittingEmptySubsequences: false)
-            guard columns.count == 2,
-                  let data = data(fromHex: String(columns[1])),
-                  let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-            else { continue }
-            let key = String(columns[0])
+        for record in parseCLIAuthRows(result.stdout) {
+            guard let object = try? JSONSerialization.jsonObject(
+                with: record.data,
+                options: [.fragmentsAllowed]
+            ) else { continue }
+            let key = record.key
             let fallbackMethod: String?
             let fallbackProvider: String?
             if key.contains("social") {
@@ -212,6 +214,16 @@ actor KiroProvider {
             }
         }
         return tokenKeys.compactMap { parsedByKey[$0] }
+    }
+
+    static func parseCLIAuthRows(_ output: String) -> [(key: String, data: Data)] {
+        output.split(whereSeparator: \Character.isNewline).compactMap { row in
+            let columns = row.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            guard columns.count == 2,
+                  let data = data(fromHex: String(columns[1]))
+            else { return nil }
+            return (String(columns[0]), data)
+        }
     }
 
     private static func readStoredProfileArn() -> String? {

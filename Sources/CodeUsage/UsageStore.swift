@@ -11,6 +11,7 @@ final class UsageStore: ObservableObject {
         .qoder: ProviderDisplayState()
     ]
     @Published private(set) var installedProviders = ProviderInstallation.installedProviders()
+    @Published private(set) var archivedProviders: Set<ProviderKind>
     @Published private(set) var menuBarProviders: Set<ProviderKind>
     @Published private(set) var cursorIndividualLimitCents: Int64?
     @Published private(set) var isRefreshing = false
@@ -26,6 +27,7 @@ final class UsageStore: ObservableObject {
     private var refreshLoop: Task<Void, Never>?
     private var refreshAfterCurrent = false
     private let cursorIndividualLimitKey = "cursor.onDemand.personalLimitCents.v1"
+    private let archivedProvidersKey = "providers.archived.v1"
 
     init(
         defaults: UserDefaults = .standard,
@@ -33,10 +35,14 @@ final class UsageStore: ObservableObject {
     ) {
         self.defaults = defaults
         self.simulationCategory = simulationCategory
+        self.archivedProviders = ProviderArchive.decode(
+            defaults.stringArray(forKey: "providers.archived.v1") ?? []
+        )
         if let simulationCategory {
             self.cursorIndividualLimitCents = nil
             self.menuBarProviders = Set(ProviderKind.allCases)
             self.installedProviders = ProviderKind.allCases
+            self.archivedProviders = []
             self.states = SubscriptionSimulation.states(for: simulationCategory)
             self.lastUpdated = Date()
             return
@@ -85,32 +91,33 @@ final class UsageStore: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         installedProviders = ProviderInstallation.installedProviders()
+        let providersToRefresh = displayedProviders
         let cursorLimit = cursorIndividualLimitCents
 
         var tasks: [Task<CapturedResult, Never>] = []
-        if installedProviders.contains(.codex) {
+        if providersToRefresh.contains(.codex) {
             tasks.append(Task {
                 await self.capture(provider: .codex) { try await self.codex.fetch() }
             })
         }
-        if installedProviders.contains(.cursor) {
+        if providersToRefresh.contains(.cursor) {
             tasks.append(Task {
                 await self.capture(provider: .cursor) {
                     try await self.cursor.fetch(individualLimitCents: cursorLimit)
                 }
             })
         }
-        if installedProviders.contains(.claude) {
+        if providersToRefresh.contains(.claude) {
             tasks.append(Task {
                 await self.capture(provider: .claude) { try await self.claude.fetch() }
             })
         }
-        if installedProviders.contains(.kiro) {
+        if providersToRefresh.contains(.kiro) {
             tasks.append(Task {
                 await self.capture(provider: .kiro) { try await self.kiro.fetch() }
             })
         }
-        if installedProviders.contains(.qoder) {
+        if providersToRefresh.contains(.qoder) {
             tasks.append(Task {
                 await self.capture(provider: .qoder) { try await self.qoder.fetch() }
             })
@@ -125,6 +132,7 @@ final class UsageStore: ObservableObject {
                 var state = states[failure.provider] ?? ProviderDisplayState()
                 state.errorMessage = failure.message
                 state.isStale = state.snapshot != nil
+                state.requiresSignIn = failure.requiresSignIn
                 states[failure.provider] = state
             }
         }
@@ -140,9 +148,42 @@ final class UsageStore: ObservableObject {
         states[provider] ?? ProviderDisplayState()
     }
 
+    var displayedProviders: [ProviderKind] {
+        ProviderKind.allCases.filter {
+            installedProviders.contains($0) && !archivedProviders.contains($0)
+        }
+    }
+
+    var archivedProvidersList: [ProviderKind] {
+        ProviderKind.allCases.filter(archivedProviders.contains)
+    }
+
     var visibleMenuBarProviders: [ProviderKind] {
         ProviderKind.allCases.filter {
-            installedProviders.contains($0) && menuBarProviders.contains($0)
+            installedProviders.contains($0)
+                && !archivedProviders.contains($0)
+                && menuBarProviders.contains($0)
+        }
+    }
+
+    func archive(_ provider: ProviderKind) {
+        guard installedProviders.contains(provider), !archivedProviders.contains(provider)
+        else { return }
+        var updated = archivedProviders
+        updated.insert(provider)
+        setArchivedProviders(updated)
+    }
+
+    func unarchive(_ provider: ProviderKind) {
+        guard archivedProviders.contains(provider) else { return }
+        var updated = archivedProviders
+        updated.remove(provider)
+        setArchivedProviders(updated)
+        guard simulationCategory == nil, installedProviders.contains(provider) else { return }
+        if isRefreshing {
+            refreshAfterCurrent = true
+        } else {
+            Task { await refresh() }
         }
     }
 
@@ -201,6 +242,12 @@ final class UsageStore: ObservableObject {
         cursorIndividualLimitCents.map { Double($0) / 100 }
     }
 
+    private func setArchivedProviders(_ providers: Set<ProviderKind>) {
+        archivedProviders = providers
+        guard simulationCategory == nil else { return }
+        defaults.set(ProviderArchive.encode(providers), forKey: archivedProvidersKey)
+    }
+
     func menuBarText(for providers: [ProviderKind]) -> String {
         providers.map { provider in
             let snapshot = state(for: provider).snapshot
@@ -234,6 +281,7 @@ final class UsageStore: ObservableObject {
     private struct CapturedFailure: Sendable {
         let provider: ProviderKind
         let message: String
+        let requiresSignIn: Bool
     }
 
     private enum CapturedResult: Sendable {
@@ -248,9 +296,11 @@ final class UsageStore: ObservableObject {
         do {
             return .success(try await operation())
         } catch {
+            let usageError = error as? UsageError
             return .failure(CapturedFailure(
                 provider: provider,
-                message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription,
+                requiresSignIn: usageError?.requiresSignIn ?? false
             ))
         }
     }

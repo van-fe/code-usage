@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="182 175 700 700" fill="none">
+  <title>CodeUsage AI dashboard status bar logo</title>
+
+  <path
+    d="M572 797.829C552.635 801.874 532.566 804 512 804C350.733 804 220 673.267 220 512C220 350.733 350.733 220 512 220C673.267 220 804 350.733 804 512C804 532.212 801.946 551.944 798.036 571"
+    stroke="#000000"
+    stroke-width="72"
+    stroke-linecap="round"
+  />
+
+  <g fill="#000000">
+    <circle cx="379" cy="379" r="28"/>
+    <circle cx="324" cy="512" r="28"/>
+    <circle cx="379" cy="645" r="28"/>
+    <circle cx="512" cy="700" r="28"/>
+    <circle cx="645" cy="645" r="28"/>
+    <circle cx="700" cy="512" r="28"/>
+    <circle cx="645" cy="379" r="28"/>
+  </g>
+
+  <path d="M512 512L669 355" stroke="#000000" stroke-width="76" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="50" fill="#000000"/>
+
+  <path
+    d="M619.5 852L683.72 684.56H735.46L799.68 852H748.72L734.68 816.38H684.24L670.46 852H619.5ZM690.74 781.28H728.18L709.46 732.14L690.74 781.28ZM817.923 852V684.56H866.803V852H817.923Z"
+    fill="#000000"
+  />
+</svg>

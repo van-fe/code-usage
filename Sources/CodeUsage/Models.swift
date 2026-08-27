@@ -82,6 +82,18 @@ enum ProviderKind: String, CaseIterable, Identifiable, Hashable, Sendable {
     }
 }
 
+enum ProviderArchive {
+    static func decode(_ rawValues: [String]) -> Set<ProviderKind> {
+        Set(rawValues.compactMap(ProviderKind.init(rawValue:)))
+    }
+
+    static func encode(_ providers: Set<ProviderKind>) -> [String] {
+        ProviderKind.allCases
+            .filter(providers.contains)
+            .map(\.rawValue)
+    }
+}
+
 enum ProviderInstallation {
     static func installedProviders() -> [ProviderKind] {
         ProviderKind.allCases.filter(isInstalled)
@@ -137,6 +149,166 @@ enum ProviderInstallation {
         }
     }
 
+    static func loginCommand(for provider: ProviderKind) -> String? {
+        switch provider {
+        case .codex:
+            return loginCommand(
+                named: "codex",
+                candidates: [
+                    "~/.local/bin/codex",
+                    "/opt/homebrew/bin/codex",
+                    "/usr/local/bin/codex",
+                    "/usr/bin/codex"
+                ],
+                arguments: "login"
+            )
+        case .cursor:
+            return nil
+        case .claude:
+            return loginCommand(
+                named: "claude",
+                candidates: [
+                    "~/.local/bin/claude",
+                    "~/.claude/local/claude",
+                    "/opt/homebrew/bin/claude",
+                    "/usr/local/bin/claude"
+                ],
+                arguments: "auth login"
+            )
+        case .kiro:
+            return loginCommand(
+                named: "kiro-cli",
+                candidates: [
+                    "/Applications/Kiro CLI.app/Contents/MacOS/kiro-cli",
+                    "~/.local/bin/kiro-cli",
+                    "/opt/homebrew/bin/kiro-cli",
+                    "/usr/local/bin/kiro-cli"
+                ],
+                arguments: "login"
+            ) ?? loginCommand(
+                named: "kiro",
+                candidates: [
+                    "~/.local/bin/kiro",
+                    "/opt/homebrew/bin/kiro",
+                    "/usr/local/bin/kiro"
+                ],
+                arguments: "login"
+            )
+        case .qoder:
+            let environment = ProcessInfo.processInfo.environment
+            var qoderCLICandidates: [String] = []
+            if let override = environment["QODERCLI_PATH"], !override.isEmpty {
+                qoderCLICandidates.append(override)
+            }
+            if let cliHome = environment["QODER_CLI_HOME"], !cliHome.isEmpty {
+                qoderCLICandidates.append("\(cliHome)/.qoder/local/qodercli")
+            }
+            qoderCLICandidates += [
+                "~/.qoder/local/qodercli",
+                "~/.qoder/bin/qodercli",
+                "~/.local/bin/qodercli",
+                "/opt/homebrew/bin/qodercli",
+                "/usr/local/bin/qodercli",
+                "/usr/bin/qodercli"
+            ]
+            if let command = loginCommand(
+                named: "qodercli",
+                candidates: qoderCLICandidates,
+                arguments: "login"
+            ) {
+                return command
+            }
+            return loginCommand(
+                named: "qoder",
+                candidates: [
+                    "~/.qoder/local/qoder",
+                    "~/.qoder/bin/qoder",
+                    "~/.local/bin/qoder",
+                    "/opt/homebrew/bin/qoder",
+                    "/usr/local/bin/qoder",
+                    "/usr/bin/qoder"
+                ],
+                arguments: "login"
+            )
+        }
+    }
+
+    static func cliExecutable(for provider: ProviderKind) -> String? {
+        switch provider {
+        case .codex:
+            return executable(
+                named: "codex",
+                candidates: [
+                    "~/.local/bin/codex",
+                    "/Applications/ChatGPT.app/Contents/Resources/codex",
+                    "/Applications/Codex.app/Contents/MacOS/Codex",
+                    "/opt/homebrew/bin/codex",
+                    "/usr/local/bin/codex",
+                    "/usr/bin/codex"
+                ]
+            )
+        case .cursor:
+            // Cursor's `cursor`/`code` launchers open the IDE; they are not an
+            // interactive agent CLI, so the IDE action handles this provider.
+            return nil
+        case .claude:
+            return executable(
+                named: "claude",
+                candidates: [
+                    "~/.local/bin/claude",
+                    "~/.claude/local/claude",
+                    "/opt/homebrew/bin/claude",
+                    "/usr/local/bin/claude",
+                    "/usr/bin/claude"
+                ]
+            )
+        case .kiro:
+            return executable(
+                named: "kiro-cli",
+                candidates: [
+                    "/Applications/Kiro CLI.app/Contents/MacOS/kiro-cli",
+                    "~/.local/bin/kiro-cli",
+                    "/opt/homebrew/bin/kiro-cli",
+                    "/usr/local/bin/kiro-cli"
+                ]
+            )
+        case .qoder:
+            let environment = ProcessInfo.processInfo.environment
+            var qoderCLICandidates: [String] = []
+            if let override = environment["QODERCLI_PATH"], !override.isEmpty {
+                qoderCLICandidates.append(override)
+            }
+            if let cliHome = environment["QODER_CLI_HOME"], !cliHome.isEmpty {
+                qoderCLICandidates.append("\(cliHome)/.qoder/local/qodercli")
+            }
+            qoderCLICandidates += [
+                "~/.qoder/local/qodercli",
+                "~/.qoder/bin/qodercli",
+                "~/.local/bin/qodercli",
+                "/opt/homebrew/bin/qodercli",
+                "/usr/local/bin/qodercli",
+                "/usr/bin/qodercli"
+            ]
+            if let executable = executable(
+                named: "qodercli",
+                candidates: qoderCLICandidates
+            ) {
+                return executable
+            }
+            return executable(
+                named: "qoder",
+                candidates: [
+                    "~/.qoder/local/qoder",
+                    "~/.qoder/bin/qoder",
+                    "~/.local/bin/qoder",
+                    "/opt/homebrew/bin/qoder",
+                    "/usr/local/bin/qoder",
+                    "/usr/bin/qoder"
+                ]
+            )
+        }
+    }
+
     static func isQoderInstalled(
         environment: [String: String],
         fileExists: (String) -> Bool,
@@ -186,13 +358,43 @@ enum ProviderInstallation {
     }
 
     private static func hasExecutable(_ candidates: [String], named name: String) -> Bool {
+        executable(named: name, candidates: candidates) != nil
+    }
+
+    private static func executable(named name: String, candidates: [String]) -> String? {
         var paths = candidates.map(expandedHome)
         if let searchPath = ProcessInfo.processInfo.environment["PATH"] {
             paths += searchPath.split(separator: ":").map {
                 URL(fileURLWithPath: String($0)).appendingPathComponent(name).path
             }
         }
-        return paths.contains(where: FileManager.default.isExecutableFile(atPath:))
+        return paths.first(where: { ProcessUtils.isExecutableRegularFile(atPath: $0) })
+    }
+
+    private static func loginCommand(
+        named name: String,
+        candidates: [String],
+        arguments: String
+    ) -> String? {
+        if let searchPath = ProcessInfo.processInfo.environment["PATH"],
+           searchPath.split(separator: ":").contains(where: { directory in
+               let path = URL(fileURLWithPath: String(directory))
+                   .appendingPathComponent(name).path
+               return ProcessUtils.isExecutableRegularFile(atPath: path)
+           }) {
+            return "\(name) \(arguments)"
+        }
+        guard let executable = candidates.lazy
+            .map(expandedHome)
+            .first(where: { ProcessUtils.isExecutableRegularFile(atPath: $0) })
+        else { return nil }
+        return "\(shellQuoted(executable)) \(arguments)"
+    }
+
+    private static func shellQuoted(_ value: String) -> String {
+        guard !value.allSatisfy({ $0.isLetter || $0.isNumber || "/._-".contains($0) })
+        else { return value }
+        return "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 
     private static func expandedHome(_ path: String) -> String {
@@ -335,6 +537,7 @@ struct ProviderDisplayState: Equatable, Sendable {
     var snapshot: ProviderSnapshot?
     var errorMessage: String?
     var isStale = false
+    var requiresSignIn = false
 }
 
 enum UsageError: LocalizedError, Sendable {
@@ -351,6 +554,11 @@ enum UsageError: LocalizedError, Sendable {
              .requestFailed(let message):
             return message
         }
+    }
+
+    var requiresSignIn: Bool {
+        if case .notSignedIn = self { return true }
+        return false
     }
 }
 

@@ -6,6 +6,7 @@ private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
 struct DashboardView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var launchAtLogin: LaunchAtLoginManager
+    @State private var showsArchivedProviders = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,8 +30,10 @@ struct DashboardView: View {
         VStack(spacing: 12) {
             if store.installedProviders.isEmpty {
                 emptyState
+            } else if store.displayedProviders.isEmpty {
+                allProvidersArchivedState
             } else {
-                ForEach(store.installedProviders) { provider in
+                ForEach(store.displayedProviders) { provider in
                     ProviderCard(
                         provider: provider,
                         state: store.state(for: provider),
@@ -40,14 +43,112 @@ struct DashboardView: View {
                         toggleMenuBarVisibility: {
                             store.toggleMenuBarVisibility(provider)
                         },
+                        archiveProvider: {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                showsArchivedProviders = true
+                                store.archive(provider)
+                            }
+                        },
                         setCursorIndividualLimitDollars: { value in
                             store.setCursorIndividualLimitDollars(value)
                         }
                     )
                 }
             }
+            if !store.archivedProvidersList.isEmpty {
+                archivedProvidersSection
+            }
         }
         .padding(14)
+    }
+
+    private var allProvidersArchivedState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "archivebox")
+                .font(.system(size: 25, weight: .regular))
+                .foregroundStyle(.secondary)
+            Text("所有已安装工具均已归档")
+                .font(.headline)
+            Text("可在下方的已归档列表中恢复显示。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+    }
+
+    private var archivedProvidersSection: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    showsArchivedProviders.toggle()
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(showsArchivedProviders ? 90 : 0))
+                        .animation(
+                            .easeInOut(duration: 0.18),
+                            value: showsArchivedProviders
+                        )
+                    Label("已归档", systemImage: "archivebox")
+                        .font(.caption.weight(.semibold))
+                    Text("\(store.archivedProvidersList.count)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(.primary.opacity(0.06), in: Capsule())
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(11)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(showsArchivedProviders ? "收起已归档列表" : "展开已归档列表")
+            .accessibilityLabel("已归档，\(store.archivedProvidersList.count) 个工具")
+            .accessibilityValue(showsArchivedProviders ? "已展开" : "已收起")
+            .accessibilityHint(showsArchivedProviders ? "点击收起列表" : "点击展开列表")
+
+            if showsArchivedProviders {
+                Divider()
+                    .padding(.horizontal, 11)
+
+                VStack(spacing: 0) {
+                    ForEach(store.archivedProvidersList) { provider in
+                        HStack(spacing: 8) {
+                            ProviderAppIcon(provider: provider, size: 18)
+                            Text(provider.title)
+                                .font(.caption.weight(.medium))
+                            if !store.installedProviders.contains(provider) {
+                                Text("未检测到安装")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("取消归档") {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    store.unarchive(provider)
+                                }
+                            }
+                            .buttonStyle(CompactActionButtonStyle())
+                            .font(.caption2)
+                            .accessibilityLabel("取消归档 \(provider.title)")
+                        }
+                        .padding(.vertical, 7)
+
+                        if provider != store.archivedProvidersList.last {
+                            Divider()
+                        }
+                    }
+                }
+                .padding(.horizontal, 11)
+                .padding(.bottom, 4)
+            }
+        }
+        .background(.secondary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var emptyState: some View {
@@ -78,9 +179,7 @@ struct DashboardView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
-            Image(systemName: "gauge.with.dots.needle.67percent")
-                .font(.system(size: 15, weight: .semibold))
-                .frame(width: 18, height: 18)
+            CodeUsageLogo(size: 18)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("CodeUsage")
@@ -90,7 +189,7 @@ struct DashboardView: View {
                     ? "订阅模拟 · 示例数据仅用于界面检查"
                     : "Codex、Cursor、Claude 等 AI 编程工具用量一览")
                     .font(.system(size: 9, weight: .regular))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color.secondary.opacity(0.82))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                     .allowsTightening(true)
@@ -171,15 +270,15 @@ struct DashboardView: View {
             if store.isSimulationMode {
                 Text("模拟数据 · 不读取真实账号")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             } else if let updated = store.lastUpdated {
                 Text("更新于 \(updated.formatted(date: .omitted, time: .shortened))")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             } else {
                 Text("每 5 分钟自动刷新")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
             Button {
@@ -254,6 +353,36 @@ struct DashboardView: View {
     private func openGitHubRepository() {
         guard let url = URL(string: "https://github.com/van-fe/code-usage") else { return }
         NSWorkspace.shared.open(url)
+    }
+}
+
+private struct CodeUsageLogo: View {
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let icon = templateIcon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .renderingMode(.template)
+            } else {
+                Image(systemName: "gauge.with.dots.needle.67percent")
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(width: size, height: size)
+        .foregroundStyle(.primary)
+        .accessibilityLabel("CodeUsage")
+    }
+
+    private var templateIcon: NSImage? {
+        guard let resourceURL = Bundle.main.resourceURL?
+            .appendingPathComponent("statusbar-logo.svg"),
+              let image = NSImage(contentsOf: resourceURL) else { return nil }
+        image.isTemplate = true
+        return image
     }
 }
 
@@ -353,9 +482,12 @@ private struct ProviderCard: View {
     let isShownInMenuBar: Bool
     let cursorIndividualLimitDollars: Double?
     let toggleMenuBarVisibility: () -> Void
+    let archiveProvider: () -> Void
     let setCursorIndividualLimitDollars: (Double?) -> Void
     @State private var isEditingCursorLimit = false
     @State private var cursorLimitDraft = ""
+    @State private var copiedLoginCommand: String?
+    @State private var expandedMetricSectionIDs: Set<String> = []
     @FocusState private var cursorLimitFieldFocused: Bool
 
     var body: some View {
@@ -367,34 +499,46 @@ private struct ProviderCard: View {
                     PlanBadge(text: plan)
                 }
                 Spacer()
-                Button(action: toggleMenuBarVisibility) {
-                    Image(systemName: isShownInMenuBar ? "eye" : "eye.slash")
-                        .font(.system(size: 8, weight: .regular))
-                        .frame(width: 11, height: 11)
+                Menu {
+                    if hasOpenActions {
+                        if let applicationTitle = ProviderAppLauncher.applicationTitle(for: provider) {
+                            Button {
+                                ProviderAppLauncher.openApplication(provider)
+                            } label: {
+                                Label(applicationTitle, systemImage: applicationIcon)
+                            }
+                        }
+                        if ProviderInstallation.cliExecutable(for: provider) != nil {
+                            Button {
+                                ProviderAppLauncher.openCLI(provider)
+                            } label: {
+                                Label(cliActionTitle, systemImage: "terminal")
+                            }
+                        }
+                        Divider()
+                    }
+                    Button(action: toggleMenuBarVisibility) {
+                        Label(
+                            isShownInMenuBar ? "从状态栏隐藏" : "在状态栏显示",
+                            systemImage: isShownInMenuBar ? "eye.slash" : "eye"
+                        )
+                    }
+                    Divider()
+                    Button(action: archiveProvider) {
+                        Label("归档", systemImage: "archivebox")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 8, weight: .semibold))
+                        .frame(width: 12, height: 12)
                         .foregroundStyle(.secondary)
                 }
+                .menuStyle(.button)
                 .buttonStyle(CompactIconButtonStyle())
-                .arrowHoverHelp(menuBarVisibilityHelp, width: 250)
-                .accessibilityLabel(isShownInMenuBar
-                    ? "从状态栏移除 \(provider.title) 用量"
-                    : "在状态栏显示 \(provider.title) 用量")
-                .accessibilityHint(isShownInMenuBar
-                    ? "面板中的 \(provider.title) 卡片仍会保留"
-                    : "在状态栏查看 \(provider.title) 的剩余额度")
-                Button {
-                    ProviderAppLauncher.open(provider)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 11, weight: .regular))
-                            .frame(width: 12, height: 12)
-                        Text("打开")
-                    }
-                }
-                .buttonStyle(CompactActionButtonStyle())
-                .font(.caption)
-                .help("打开 \(provider.title) 应用")
-                .accessibilityLabel("打开 \(provider.title) 应用")
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("更多操作")
+                .accessibilityLabel("\(provider.title) 更多操作")
                 if state.isStale {
                     Text("旧数据")
                         .font(.caption2)
@@ -407,18 +551,13 @@ private struct ProviderCard: View {
                 if let note = snapshot.note {
                     Text(note)
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
                 if let error = state.errorMessage {
-                    Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
+                    errorContent(error, isStale: true)
                 }
             } else if let error = state.errorMessage {
-                Label(error, systemImage: "exclamationmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                errorContent(error, isStale: false)
             } else {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
@@ -432,35 +571,259 @@ private struct ProviderCard: View {
         .background(.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func metricsContent(_ metrics: [UsageMetric]) -> some View {
-        let groups = metrics.compactMap(\.group)
-        let showsGroupHeaders = showsSubscriptionGroups ||
-            groups.dropFirst().contains { $0 != groups.first }
-        return VStack(alignment: .leading, spacing: 9) {
-            ForEach(metrics.indices, id: \.self) { index in
-                let metric = metrics[index]
-                if showsGroupHeaders,
-                   let group = metric.group,
-                   index == 0 || metrics[index - 1].group != group {
-                    metricGroupHeader(group, isFirst: index == 0)
+    @ViewBuilder
+    private func errorContent(_ error: String, isStale: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label(
+                error,
+                systemImage: isStale
+                    ? "exclamationmark.triangle.fill"
+                    : "exclamationmark.circle"
+            )
+            .font(isStale ? .caption2 : .caption)
+            .foregroundStyle(isStale ? Color.orange : Color.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+            if state.requiresSignIn {
+                if let command = ProviderInstallation.loginCommand(for: provider) {
+                    Text("请在终端运行以下命令，登录完成后刷新：")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(command)
+                            .font(.system(size: 10.5, design: .monospaced))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                        Spacer(minLength: 2)
+                        Button {
+                            copyLoginCommand(command)
+                        } label: {
+                            Label(
+                                copiedLoginCommand == command ? "已复制" : "复制",
+                                systemImage: copiedLoginCommand == command
+                                    ? "checkmark"
+                                    : "doc.on.doc"
+                            )
+                        }
+                        .buttonStyle(CompactActionButtonStyle())
+                        .font(.caption2)
+                        .accessibilityLabel("复制 \(provider.title) 登录命令")
+                    }
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 7)
+                    .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                } else {
+                    Text("请从右上角菜单打开应用，完成登录后刷新。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
-                metricRow(metric)
             }
         }
     }
 
+    private func copyLoginCommand(_ command: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+        copiedLoginCommand = command
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if copiedLoginCommand == command {
+                copiedLoginCommand = nil
+            }
+        }
+    }
+
+    private var applicationIcon: String {
+        switch provider {
+        case .cursor, .kiro, .qoder:
+            return "chevron.left.forwardslash.chevron.right"
+        case .codex, .claude:
+            return "macwindow"
+        }
+    }
+
+    private var hasOpenActions: Bool {
+        ProviderAppLauncher.applicationTitle(for: provider) != nil ||
+            ProviderInstallation.cliExecutable(for: provider) != nil
+    }
+
+    private var cliActionTitle: String {
+        switch provider {
+        case .codex: return "在终端启动 Codex"
+        case .cursor: return "在终端启动 Cursor CLI"
+        case .claude: return "在终端启动 Claude Code"
+        case .kiro: return "在终端启动 Kiro CLI"
+        case .qoder: return "在终端启动 Qoder CLI"
+        }
+    }
+
+    private struct MetricSection: Identifiable {
+        let id: String
+        let group: UsageMetric.Group?
+        var metrics: [UsageMetric]
+    }
+
+    private func metricsContent(_ metrics: [UsageMetric]) -> some View {
+        let groups = metrics.compactMap(\.group)
+        let showsGroupHeaders = showsSubscriptionGroups ||
+            groups.dropFirst().contains { $0 != groups.first }
+        let sections = metricSections(metrics)
+        return VStack(alignment: .leading, spacing: 9) {
+            ForEach(sections.indices, id: \.self) { index in
+                let section = sections[index]
+                let groupTimeline = sharedTimeline(for: section.metrics)
+                if showsGroupHeaders,
+                   let group = section.group {
+                    metricGroupHeader(
+                        group,
+                        isFirst: index == 0,
+                        timeline: groupTimeline
+                    )
+                }
+                if let summaryMetric = section.metrics.first {
+                    metricRow(
+                        summaryMetric,
+                        showsInlineTimeline: !showsGroupHeaders || groupTimeline == nil
+                    )
+                }
+                if section.metrics.count > 1 {
+                    metricDetails(
+                        section,
+                        showsInlineTimeline: !showsGroupHeaders || groupTimeline == nil
+                    )
+                }
+            }
+        }
+    }
+
+    private func metricSections(_ metrics: [UsageMetric]) -> [MetricSection] {
+        var sections: [MetricSection] = []
+        for metric in metrics {
+            if let lastIndex = sections.indices.last,
+               sections[lastIndex].group == metric.group {
+                sections[lastIndex].metrics.append(metric)
+            } else {
+                let groupID = metric.group?.rawValue ?? "ungrouped"
+                sections.append(MetricSection(
+                    id: "\(groupID)-\(sections.count)",
+                    group: metric.group,
+                    metrics: [metric]
+                ))
+            }
+        }
+        return sections
+    }
+
+    @ViewBuilder
+    private func metricDetails(
+        _ section: MetricSection,
+        showsInlineTimeline: Bool
+    ) -> some View {
+        let isExpanded = expandedMetricSectionIDs.contains(section.id)
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    if isExpanded {
+                        expandedMetricSectionIDs.remove(section.id)
+                    } else {
+                        expandedMetricSectionIDs.insert(section.id)
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    Text(isExpanded
+                        ? "收起明细"
+                        : "另外 \(section.metrics.count - 1) 项明细")
+                    Spacer(minLength: 0)
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(isExpanded ? "收起用量明细" : "展开全部用量明细")
+            .accessibilityLabel(
+                isExpanded
+                    ? "收起 \(provider.title) 用量明细"
+                    : "展开 \(provider.title) 的另外 \(section.metrics.count - 1) 项用量明细"
+            )
+            .accessibilityValue(isExpanded ? "已展开" : "已收起")
+
+            if isExpanded {
+                ForEach(Array(section.metrics.dropFirst())) { metric in
+                    metricRow(metric, showsInlineTimeline: showsInlineTimeline)
+                }
+            }
+        }
+        .padding(.leading, 8)
+    }
+
+    private struct SharedMetricTimeline: Equatable {
+        let deadline: String
+        let suggestedPercent: Int?
+    }
+
+    private func sharedTimeline(for metrics: [UsageMetric]) -> SharedMetricTimeline? {
+        let progressMetrics = metrics.filter(\.showsProgress)
+        guard !progressMetrics.isEmpty else { return nil }
+
+        let deadlines = progressMetrics.compactMap { $0.deadlineDescription() }
+        guard deadlines.count == progressMetrics.count,
+              let deadline = deadlines.first,
+              deadlines.dropFirst().allSatisfy({ $0 == deadline })
+        else { return nil }
+
+        let suggestions = progressMetrics.compactMap {
+            $0.suggestedUsedPercent().map { Int($0.rounded()) }
+        }
+        let suggestedPercent: Int?
+        if suggestions.count == progressMetrics.count,
+           let suggested = suggestions.first,
+           suggestions.dropFirst().allSatisfy({ $0 == suggested }) {
+            suggestedPercent = suggested
+        } else {
+            suggestedPercent = nil
+        }
+
+        return SharedMetricTimeline(
+            deadline: deadline,
+            suggestedPercent: suggestedPercent
+        )
+    }
+
     private func metricGroupHeader(
         _ group: UsageMetric.Group,
-        isFirst: Bool
+        isFirst: Bool,
+        timeline: SharedMetricTimeline?
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if !isFirst {
                 Divider()
             }
-            Text(metricGroupTitle(group))
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 6) {
+                Text(metricGroupTitle(group))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                if let timeline {
+                    Text(groupTimelineText(timeline))
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
         }
+    }
+
+    private func groupTimelineText(_ timeline: SharedMetricTimeline) -> String {
+        if let suggested = timeline.suggestedPercent {
+            return "\(timeline.deadline) · 建议 \(suggested)%"
+        }
+        return timeline.deadline
     }
 
     private func metricGroupTitle(_ group: UsageMetric.Group) -> String {
@@ -506,8 +869,13 @@ private struct ProviderCard: View {
         }
     }
 
-    private func metricRow(_ metric: UsageMetric) -> some View {
+    private func metricRow(
+        _ metric: UsageMetric,
+        showsInlineTimeline: Bool
+    ) -> some View {
         let suggested = metric.showsProgress ? metric.suggestedUsedPercent() : nil
+        let isCursorSummary = provider == .cursor && metric.id == "total"
+        let isCursorDetail = provider == .cursor && ["auto", "api"].contains(metric.id)
         return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 HStack(spacing: 4) {
@@ -533,19 +901,21 @@ private struct ProviderCard: View {
                         )
                     }
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(isCursorSummary ? .caption.weight(.semibold) : .caption)
+                .foregroundStyle(isCursorSummary ? Color.primary : Color.secondary)
                 Spacer()
                 if metric.id == "on_demand_personal", isEditingCursorLimit {
                     cursorLimitEditor
                 } else if metric.showsProgress {
-                    Text("剩余 \(Int(metric.remainingPercent.rounded()))%")
+                    Text("已用 \(Int(metric.clampedPercent.rounded()))%")
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
                         .monospacedDigit()
-                    if let deadline = metric.deadlineDescription() {
+                    if showsInlineTimeline,
+                       let deadline = metric.deadlineDescription() {
                         Text("· \(deadline)")
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                     }
                 } else if let valueText = metricValueText(metric) {
                     Text(valueText)
@@ -560,7 +930,7 @@ private struct ProviderCard: View {
                         suggestedPercent: suggested,
                         fillColor: progressColor(metric.clampedPercent)
                     )
-                    if let suggested {
+                    if showsInlineTimeline, let suggested {
                         HStack(spacing: 3) {
                             Circle()
                                 .fill(suggestedUsageColor)
@@ -577,11 +947,12 @@ private struct ProviderCard: View {
                 if let valueText = metricValueText(metric) {
                     Text(valueText)
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
             }
         }
+        .padding(.leading, isCursorDetail ? 8 : 0)
     }
 
     private func progressAccessibilityLabel(_ metric: UsageMetric, suggested: Double?) -> String {
@@ -623,7 +994,7 @@ private struct ProviderCard: View {
         if let limit = cursorIndividualLimitDollars {
             return "当前按 $\(formattedLimit(limit)) 的显示预算计算进度。点击修改。这个金额不会更改 Cursor 的消费上限。"
         }
-        return "点击设置显示预算。CodeUsage 会据此显示进度和剩余百分比；这个金额不会更改 Cursor 的消费上限。"
+        return "点击设置显示预算。CodeUsage 会据此显示消费进度；这个金额不会更改 Cursor 的消费上限。"
     }
 
     private var cursorLimitAccessibilityLabel: String {
@@ -719,18 +1090,18 @@ private struct ProviderCard: View {
             if let limitCents {
                 let limit = currency(limitCents, minimumFractionDigits: 0)
                 if provider == .cursor, metric.id == "on_demand_personal" {
-                    let label = metric.allowsLimitEditing ? "显示预算" : "消费上限"
-                    return "已产生 \(used) / \(label) \(limit)"
+                    let label = metric.allowsLimitEditing ? "预算" : "消费上限"
+                    return "\(used) / \(label) \(limit)"
                 }
                 if provider == .cursor, metric.id == "on_demand_team" {
                     let label = cursorSubscriptionCategory == .enterprise
                         ? "组织上限"
                         : "团队上限"
-                    return "已产生 \(used) / \(label) \(limit)"
+                    return "\(used) / \(label) \(limit)"
                 }
                 return "已用 \(used) / \(limit)"
             }
-            return provider == .cursor ? "已产生 \(used)" : "已用 \(used)"
+            return provider == .cursor ? "已消费 \(used)" : "已用 \(used)"
         case .quantity(let used, let limit, let remaining, let unit):
             if let used, let limit {
                 return "已用 \(decimal(used)) / \(decimal(limit)) \(unit)"
@@ -768,22 +1139,10 @@ private struct ProviderCard: View {
             ?? String(format: "%.2f", value)
     }
 
-    private var menuBarVisibilityHelp: String {
-        isShownInMenuBar
-            ? "从状态栏隐藏 \(provider.title) 的用量；面板卡片仍会保留。"
-            : "在状态栏显示 \(provider.title) 的用量。"
-    }
-
     private func progressColor(_ used: Double) -> Color {
         if used >= 90 { return .red }
         if used >= 70 { return .orange }
-        switch provider {
-        case .codex: return .blue
-        case .cursor: return Color(red: 0.95, green: 0.37, blue: 0.18)
-        case .claude: return Color(red: 0.78, green: 0.39, blue: 0.25)
-        case .kiro: return Color(red: 0.56, green: 0.40, blue: 0.92)
-        case .qoder: return Color(red: 0.22, green: 0.68, blue: 0.62)
-        }
+        return .accentColor
     }
 
 }
@@ -875,7 +1234,7 @@ private struct MetricHelpIcon: View {
     var body: some View {
         Image(systemName: "questionmark.circle")
             .font(.system(size: 10.5, weight: .regular))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)
             .frame(width: 18, height: 18)
             .contentShape(Rectangle())
             .arrowHoverHelp(text, width: 280)
@@ -1290,48 +1649,134 @@ struct ProviderAppIcon: View {
 }
 
 enum ProviderAppLauncher {
-    static func open(_ provider: ProviderKind) {
+    private struct ApplicationCandidate {
+        let title: String
         let bundleIdentifiers: [String]
         let paths: [String]
+    }
+
+    static func applicationTitle(for provider: ProviderKind) -> String? {
+        resolvedApplication(for: provider)?.candidate.title
+    }
+
+    static func openApplication(_ provider: ProviderKind) {
+        guard let target = resolvedApplication(for: provider) else { return }
+        NSWorkspace.shared.openApplication(
+            at: target.url,
+            configuration: NSWorkspace.OpenConfiguration()
+        )
+    }
+
+    static func openCLI(_ provider: ProviderKind) {
+        guard let executable = ProviderInstallation.cliExecutable(for: provider) else { return }
+        let commandURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codeusage-\(provider.rawValue)-\(UUID().uuidString)")
+            .appendingPathExtension("command")
+        let script = """
+        #!/bin/zsh
+        command_file="$0"
+        rm -f "$command_file"
+        cd \(shellQuoted(FileManager.default.homeDirectoryForCurrentUser.path)) || exit 1
+        exec \(shellQuoted(executable))
+        """
+
+        do {
+            try script.write(to: commandURL, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o700],
+                ofItemAtPath: commandURL.path
+            )
+            if !NSWorkspace.shared.open(commandURL) {
+                try? FileManager.default.removeItem(at: commandURL)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: commandURL)
+        }
+    }
+
+    private static func candidates(for provider: ProviderKind) -> [ApplicationCandidate] {
         switch provider {
         case .codex:
-            bundleIdentifiers = ["com.openai.codex"]
-            paths = ["/Applications/Codex.app", "/Applications/ChatGPT.app"]
+            return [
+                ApplicationCandidate(
+                    title: "打开 Codex 桌面端",
+                    bundleIdentifiers: [],
+                    paths: [
+                        "/Applications/Codex.app",
+                        ProcessUtils.expandedHome("~/Applications/Codex.app")
+                    ]
+                ),
+                ApplicationCandidate(
+                    title: "打开 ChatGPT 桌面端",
+                    bundleIdentifiers: ["com.openai.codex"],
+                    paths: [
+                        "/Applications/ChatGPT.app",
+                        ProcessUtils.expandedHome("~/Applications/ChatGPT.app")
+                    ]
+                )
+            ]
         case .cursor:
-            bundleIdentifiers = ["com.todesktop.230313mzl4w4u92"]
-            paths = ["/Applications/Cursor.app"]
+            return [ApplicationCandidate(
+                title: "打开 Cursor IDE",
+                bundleIdentifiers: ["com.todesktop.230313mzl4w4u92"],
+                paths: [
+                    "/Applications/Cursor.app",
+                    ProcessUtils.expandedHome("~/Applications/Cursor.app")
+                ]
+            )]
         case .claude:
-            bundleIdentifiers = ["com.anthropic.claudefordesktop"]
-            paths = ["/Applications/Claude.app"]
+            return [ApplicationCandidate(
+                title: "打开 Claude 桌面端",
+                bundleIdentifiers: ["com.anthropic.claudefordesktop"],
+                paths: [
+                    "/Applications/Claude.app",
+                    ProcessUtils.expandedHome("~/Applications/Claude.app")
+                ]
+            )]
         case .kiro:
-            bundleIdentifiers = ["dev.kiro.desktop"]
-            paths = [
-                "/Applications/Kiro.app",
-                ProcessUtils.expandedHome("~/Applications/Kiro.app"),
-                "/Applications/Kiro CLI.app",
-                ProcessUtils.expandedHome("~/Applications/Kiro CLI.app")
-            ]
+            return [ApplicationCandidate(
+                title: "打开 Kiro IDE",
+                bundleIdentifiers: ["dev.kiro.desktop"],
+                paths: [
+                    "/Applications/Kiro.app",
+                    ProcessUtils.expandedHome("~/Applications/Kiro.app")
+                ]
+            )]
         case .qoder:
-            bundleIdentifiers = ["com.qoder.ide"]
-            paths = [
-                "/Applications/Qoder IDE.app",
-                "/Applications/Qoder.app",
-                ProcessUtils.expandedHome("~/Applications/Qoder IDE.app"),
-                ProcessUtils.expandedHome("~/Applications/Qoder.app")
-            ]
+            return [ApplicationCandidate(
+                title: "打开 Qoder IDE",
+                bundleIdentifiers: ["com.qoder.ide"],
+                paths: [
+                    "/Applications/Qoder IDE.app",
+                    "/Applications/Qoder.app",
+                    ProcessUtils.expandedHome("~/Applications/Qoder IDE.app"),
+                    ProcessUtils.expandedHome("~/Applications/Qoder.app")
+                ]
+            )]
         }
+    }
 
-        if let url = bundleIdentifiers.compactMap({
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
-        }).first {
-            NSWorkspace.shared.openApplication(
-                at: url,
-                configuration: NSWorkspace.OpenConfiguration()
-            )
-            return
+    private static func resolvedApplication(
+        for provider: ProviderKind
+    ) -> (candidate: ApplicationCandidate, url: URL)? {
+        for candidate in candidates(for: provider) {
+            if let path = candidate.paths.first(where: {
+                FileManager.default.fileExists(atPath: $0)
+            }) {
+                return (candidate, URL(fileURLWithPath: path))
+            }
+            if let url = candidate.bundleIdentifiers.lazy.compactMap({
+                NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+            }).first {
+                return (candidate, url)
+            }
         }
-        if let path = paths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            NSWorkspace.shared.open(URL(fileURLWithPath: path))
-        }
+        return nil
+    }
+
+    private static func shellQuoted(_ value: String) -> String {
+        guard !value.allSatisfy({ $0.isLetter || $0.isNumber || "/._-".contains($0) })
+        else { return value }
+        return "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 }

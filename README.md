@@ -142,7 +142,7 @@ open dist/CodeUsage.app
 ./Scripts/package_universal.sh
 ```
 
-生成带拖拽安装界面的中文 DMG：
+将 `dist/CodeUsage.app` 打包为带拖拽安装界面的中文 DMG，并直接写入 `dist/`：
 
 ```bash
 ./Scripts/package_dmg.sh
@@ -156,9 +156,11 @@ open dist/CodeUsage.app
 ./Scripts/package_source.sh
 ```
 
-Universal ZIP、DMG 和源码压缩包默认写入项目内的 `outputs/`。如需写入其它目录，可设置 `CODEUSAGE_OUTPUT_DIR`。
+DMG 默认写入项目内的 `dist/`；Universal ZIP 和源码压缩包默认写入 `outputs/`。如需写入其它目录，可设置 `CODEUSAGE_OUTPUT_DIR`。
 
 本地打包使用 ad-hoc 签名。正式对外发布前，建议使用 Developer ID Application 签名、Hardened Runtime 和 Apple 公证。
+
+GitHub Actions、Release Please 自动版本维护，以及“Apple 凭证只保留在本机 Keychain”的正式签名发布流程见 [RELEASING.md](RELEASING.md)。
 
 ## 项目结构
 
@@ -167,6 +169,7 @@ CodeUsage/
 ├── Sources/CodeUsage/   # SwiftUI 界面、状态栏控制与各工具用量 Provider
 ├── Assets/              # 应用图标、工具图标和 DMG 背景
 ├── Scripts/             # 测试、单架构、Universal、DMG 与源码打包脚本
+├── dist/                # 当前架构的 App 与 DMG（不提交到 Git）
 ├── outputs/             # 本地生成的发布包（不提交到 Git）
 ├── LICENSE              # CodeUsage 专有源码可见许可证
 ├── Package.swift
@@ -178,7 +181,7 @@ CodeUsage/
 
 ### 安装了工具但没有显示
 
-确认对应工具已经登录，然后点击面板右上角刷新。Qoder 如果只安装了 IDE，需要保持 Qoder IDE 正在运行；Claude Code 需要完成 CLI 登录。
+确认对应工具已经登录，然后点击面板右上角刷新。检测到 CLI 未登录或登录过期时，卡片会显示对应登录命令并提供复制按钮；登录完成后刷新即可。Qoder 如果只安装了 IDE，需要保持 Qoder IDE 正在运行。
 
 ### 为什么 Cursor 的总用量、Auto 和 API 不能相加？
 

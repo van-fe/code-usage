@@ -2,10 +2,16 @@
 set -euo pipefail
 
 PROJECT_DIR="${0:A:h:h}"
-APP_SOURCE="${CODEUSAGE_APP_PATH:-$PROJECT_DIR/dist-universal/CodeUsage.app}"
+APP_SOURCE="${CODEUSAGE_APP_PATH:-$PROJECT_DIR/dist/CodeUsage.app}"
 BACKGROUND_SOURCE="$PROJECT_DIR/Assets/dmg-background-final@2x.png"
-OUTPUT_DIR="${CODEUSAGE_OUTPUT_DIR:-$PROJECT_DIR/outputs}"
+OUTPUT_DIR="${CODEUSAGE_OUTPUT_DIR:-$PROJECT_DIR/dist}"
 PLIST="$APP_SOURCE/Contents/Info.plist"
+HEADLESS="${CODEUSAGE_DMG_HEADLESS:-0}"
+
+if [[ "$HEADLESS" != "0" && "$HEADLESS" != "1" ]]; then
+  echo "CODEUSAGE_DMG_HEADLESS must be 0 or 1" >&2
+  exit 1
+fi
 
 if [[ ! -d "$APP_SOURCE" ]]; then
   echo "Missing app bundle: $APP_SOURCE" >&2
@@ -17,8 +23,19 @@ if [[ ! -f "$BACKGROUND_SOURCE" ]]; then
 fi
 
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
+ARCHS=$(/usr/bin/lipo -archs "$APP_SOURCE/Contents/MacOS/CodeUsage")
+if [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]]; then
+  PACKAGE_ARCH="universal"
+elif [[ "$ARCHS" == *arm64* ]]; then
+  PACKAGE_ARCH="arm64"
+elif [[ "$ARCHS" == *x86_64* ]]; then
+  PACKAGE_ARCH="x86_64"
+else
+  echo "Unsupported app architecture: $ARCHS" >&2
+  exit 1
+fi
 VOLUME_NAME="CodeUsage 安装器"
-OUTPUT_DMG="$OUTPUT_DIR/CodeUsage-${VERSION}-macos-universal.dmg"
+OUTPUT_DMG="$OUTPUT_DIR/CodeUsage-${VERSION}-macos-${PACKAGE_ARCH}.dmg"
 WORK_DIR=$(mktemp -d "${TMPDIR%/}/CodeUsageDMG.XXXXXX")
 STAGING_DIR="$WORK_DIR/root"
 RW_DMG="$WORK_DIR/CodeUsage-rw.dmg"
@@ -28,7 +45,8 @@ VERIFY_MOUNT_POINT="$WORK_DIR/verify"
 
 cleanup() {
   if [[ -n "$VERIFY_DEVICE" ]]; then
-    /usr/bin/hdiutil detach "$VERIFY_DEVICE" >/dev/null 2>&1 || true
+    /usr/bin/hdiutil detach "$VERIFY_MOUNT_POINT" >/dev/null 2>&1 || \
+      /usr/bin/hdiutil detach "$VERIFY_DEVICE" >/dev/null 2>&1 || true
   fi
   if [[ -n "$DEVICE" ]]; then
     /usr/bin/hdiutil detach "$DEVICE" >/dev/null 2>&1 || true
@@ -37,11 +55,43 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$STAGING_DIR/.background" "$OUTPUT_DIR"
+mkdir -p "$STAGING_DIR" "$OUTPUT_DIR"
 /usr/bin/ditto "$APP_SOURCE" "$STAGING_DIR/CodeUsage.app"
+ln -s /Applications "$STAGING_DIR/应用程序"
+
+if [[ "$HEADLESS" == "1" ]]; then
+  /usr/bin/hdiutil create \
+    -srcfolder "$STAGING_DIR" \
+    -volname "$VOLUME_NAME" \
+    -fs HFS+ \
+    -format UDZO \
+    -imagekey zlib-level=9 \
+    -ov \
+    -o "$OUTPUT_DMG" >/dev/null
+  /usr/bin/hdiutil verify "$OUTPUT_DMG" >/dev/null
+
+  mkdir -p "$VERIFY_MOUNT_POINT"
+  VERIFY_ATTACH_OUTPUT=$(/usr/bin/hdiutil attach \
+    -readonly \
+    -nobrowse \
+    -mountpoint "$VERIFY_MOUNT_POINT" \
+    "$OUTPUT_DMG")
+  VERIFY_DEVICE=$(echo "$VERIFY_ATTACH_OUTPUT" | awk '/Apple_HFS/ { print $1; exit }')
+  if [[ -z "$VERIFY_DEVICE" || ! -d "$VERIFY_MOUNT_POINT/CodeUsage.app" ]] || \
+     [[ "$(readlink "$VERIFY_MOUNT_POINT/应用程序")" != "/Applications" ]]; then
+    echo "Headless DMG payload verification failed" >&2
+    exit 1
+  fi
+
+  /usr/bin/hdiutil detach "$VERIFY_MOUNT_POINT" >/dev/null
+  VERIFY_DEVICE=""
+  echo "$OUTPUT_DMG"
+  exit 0
+fi
+
+mkdir -p "$STAGING_DIR/.background"
 cp "$BACKGROUND_SOURCE" "$STAGING_DIR/.background/installer-background@2x.png"
 cp "$PROJECT_DIR/Assets/AppIcon.icns" "$STAGING_DIR/.VolumeIcon.icns"
-ln -s /Applications "$STAGING_DIR/应用程序"
 
 /usr/bin/hdiutil create \
   -srcfolder "$STAGING_DIR" \
@@ -173,7 +223,7 @@ if [[ ! -d "$VERIFY_MOUNT_POINT/CodeUsage.app" ]] || \
   exit 1
 fi
 
-/usr/bin/hdiutil detach "$VERIFY_DEVICE" >/dev/null
+/usr/bin/hdiutil detach "$VERIFY_MOUNT_POINT" >/dev/null
 VERIFY_DEVICE=""
 
 echo "$OUTPUT_DMG"

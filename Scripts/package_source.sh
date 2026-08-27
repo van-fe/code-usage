@@ -23,14 +23,24 @@ trap cleanup EXIT
 
 mkdir -p "$STAGING_DIR/Assets" "$OUTPUT_DIR"
 
-for file in LICENSE Package.swift README.md THIRD_PARTY_NOTICES.md; do
+for file in \
+  LICENSE \
+  Package.swift \
+  README.md \
+  RELEASING.md \
+  THIRD_PARTY_NOTICES.md \
+  version.json \
+  release-please-config.json \
+  .release-please-manifest.json; do
   /usr/bin/ditto "$PROJECT_DIR/$file" "$STAGING_DIR/$file"
 done
 
 /usr/bin/ditto "$PROJECT_DIR/Sources" "$STAGING_DIR/Sources"
 /usr/bin/ditto "$PROJECT_DIR/Scripts" "$STAGING_DIR/Scripts"
+/usr/bin/ditto "$PROJECT_DIR/.github" "$STAGING_DIR/.github"
 
 for asset in \
+  AppIcon.svg \
   AppIcon-1024.png \
   AppIcon.icns \
   provider-codex.svg \
@@ -39,6 +49,7 @@ for asset in \
   provider-kiro.svg \
   provider-qoder.svg \
   github-mark.svg \
+  statusbar-logo.svg \
   dmg-background-imagegen-v1.png \
   dmg-background-final.png \
   dmg-background-final@2x.png; do
@@ -50,7 +61,12 @@ pushd "$STAGING_DIR" >/dev/null
   LICENSE \
   Package.swift \
   README.md \
+  RELEASING.md \
   THIRD_PARTY_NOTICES.md \
+  version.json \
+  release-please-config.json \
+  .release-please-manifest.json \
+  .github \
   Sources \
   Assets \
   Scripts

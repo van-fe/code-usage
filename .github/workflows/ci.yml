@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-package:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Run mapper tests
+        run: ./Scripts/test.sh
+
+      - name: Build ad-hoc signed app
+        run: ./Scripts/package.sh
+
+      - name: Verify app signature
+        run: /usr/bin/codesign --verify --deep --strict dist/CodeUsage.app
+
+      - name: Build headless CI DMG
+        run: ./Scripts/package_dmg.sh
+        env:
+          CODEUSAGE_DMG_HEADLESS: "1"
+
+      - name: Upload CI DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: CodeUsage-${{ github.sha }}
+          path: dist/*.dmg
+          if-no-files-found: error
+          retention-days: 14
