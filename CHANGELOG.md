@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/van-fe/code-usage/compare/v0.11.0...v0.11.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* make the DMG installer language neutral ([63e37a7](https://github.com/van-fe/code-usage/commit/63e37a7d0b1c24e0f1457548342d8f4855499df5))
+* refresh expired Kiro sessions ([cafad6f](https://github.com/van-fe/code-usage/commit/cafad6fb814be5030b4fed76e15b0f29e0be5e3e))
+
 ## [0.11.0](https://github.com/van-fe/code-usage/compare/v0.10.1...v0.11.0) (2026-08-28)
 
 
