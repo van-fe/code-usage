@@ -139,7 +139,7 @@ open dist/CodeUsage.app
 ./Scripts/package_universal.sh
 ```
 
-将 `dist/CodeUsage.app` 打包为带拖拽安装界面的中文 DMG，并直接写入 `dist/`：
+将 `dist/CodeUsage.app` 打包为带语言中立拖拽安装界面的 DMG，并直接写入 `dist/`：
 
 ```bash
 ./Scripts/package_dmg.sh

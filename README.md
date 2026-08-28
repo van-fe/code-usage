@@ -139,7 +139,7 @@ Build a Universal app and ZIP for both Apple Silicon and Intel:
 ./Scripts/package_universal.sh
 ```
 
-Package `dist/CodeUsage.app` as a Chinese drag-to-install DMG written directly to `dist/`:
+Package `dist/CodeUsage.app` as a language-neutral drag-to-install DMG written directly to `dist/`:
 
 ```bash
 ./Scripts/package_dmg.sh

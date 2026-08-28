@@ -64,22 +64,15 @@ if let baseURL, let base = NSImage(contentsOf: baseURL) {
 let titleStyle = NSMutableParagraphStyle()
 titleStyle.alignment = .center
 
-let title = "将 CodeUsage 拖到“应用程序”完成安装"
+// A DMG background is a static bitmap and cannot switch with the viewer's
+// preferred language. Keep it language-neutral so the same signed artifact is
+// appropriate in every locale.
+let title = "CodeUsage"
 title.draw(
-    in: NSRect(x: 40, y: 394, width: 700, height: 36),
+    in: NSRect(x: 40, y: 382, width: 700, height: 40),
     withAttributes: [
-        .font: NSFont.systemFont(ofSize: 22, weight: .semibold),
+        .font: NSFont.systemFont(ofSize: 26, weight: .semibold),
         .foregroundColor: NSColor(calibratedWhite: 0.08, alpha: 1),
-        .paragraphStyle: titleStyle
-    ]
-)
-
-let subtitle = "按住左侧应用图标，拖到右侧文件夹后松开"
-subtitle.draw(
-    in: NSRect(x: 40, y: 360, width: 700, height: 28),
-    withAttributes: [
-        .font: NSFont.systemFont(ofSize: 14, weight: .regular),
-        .foregroundColor: NSColor(calibratedWhite: 0.42, alpha: 1),
         .paragraphStyle: titleStyle
     ]
 )
@@ -99,16 +92,6 @@ arrow.move(to: NSPoint(x: 405, y: 192))
 arrow.line(to: NSPoint(x: 430, y: 167))
 arrow.line(to: NSPoint(x: 405, y: 142))
 arrow.stroke()
-
-let footnote = "首次启动若被 macOS 拦截，请右键 CodeUsage.app 并选择“打开”"
-footnote.draw(
-    in: NSRect(x: 40, y: 42, width: 700, height: 22),
-    withAttributes: [
-        .font: NSFont.systemFont(ofSize: 11.5, weight: .regular),
-        .foregroundColor: NSColor(calibratedWhite: 0.42, alpha: 1),
-        .paragraphStyle: titleStyle
-    ]
-)
 
 context.flushGraphics()
 NSGraphicsContext.restoreGraphicsState()

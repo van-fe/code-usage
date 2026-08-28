@@ -34,7 +34,7 @@ else
   echo "Unsupported app architecture: $ARCHS" >&2
   exit 1
 fi
-VOLUME_NAME="CodeUsage 安装器"
+VOLUME_NAME="CodeUsage"
 OUTPUT_DMG="$OUTPUT_DIR/CodeUsage-${VERSION}-macos-${PACKAGE_ARCH}.dmg"
 WORK_DIR=$(mktemp -d "${TMPDIR%/}/CodeUsageDMG.XXXXXX")
 STAGING_DIR="$WORK_DIR/root"
@@ -57,7 +57,7 @@ trap cleanup EXIT
 
 mkdir -p "$STAGING_DIR" "$OUTPUT_DIR"
 /usr/bin/ditto "$APP_SOURCE" "$STAGING_DIR/CodeUsage.app"
-ln -s /Applications "$STAGING_DIR/应用程序"
+ln -s /Applications "$STAGING_DIR/Applications"
 
 if [[ "$HEADLESS" == "1" ]]; then
   /usr/bin/hdiutil create \
@@ -78,7 +78,7 @@ if [[ "$HEADLESS" == "1" ]]; then
     "$OUTPUT_DMG")
   VERIFY_DEVICE=$(echo "$VERIFY_ATTACH_OUTPUT" | awk '/Apple_HFS/ { print $1; exit }')
   if [[ -z "$VERIFY_DEVICE" || ! -d "$VERIFY_MOUNT_POINT/CodeUsage.app" ]] || \
-     [[ "$(readlink "$VERIFY_MOUNT_POINT/应用程序")" != "/Applications" ]]; then
+     [[ "$(readlink "$VERIFY_MOUNT_POINT/Applications")" != "/Applications" ]]; then
     echo "Headless DMG payload verification failed" >&2
     exit 1
   fi
@@ -146,7 +146,7 @@ tell application "Finder"
   set background picture of viewOptions to backgroundImage
 
   set position of item "CodeUsage.app" of targetFolder to {204, 337}
-  set position of item "应用程序" of targetFolder to {573, 337}
+  set position of item "Applications" of targetFolder to {573, 337}
   update targetFolder without registering applications
   delay 2
   close targetWindow
@@ -218,7 +218,7 @@ if ! /usr/bin/strings -a "$VERIFY_MOUNT_POINT/.DS_Store" | \
   exit 1
 fi
 if [[ ! -d "$VERIFY_MOUNT_POINT/CodeUsage.app" ]] || \
-   [[ "$(readlink "$VERIFY_MOUNT_POINT/应用程序")" != "/Applications" ]]; then
+   [[ "$(readlink "$VERIFY_MOUNT_POINT/Applications")" != "/Applications" ]]; then
   echo "Final DMG payload verification failed" >&2
   exit 1
 fi
