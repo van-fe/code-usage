@@ -292,6 +292,18 @@ struct DashboardView: View {
 
             if !store.isSimulationMode {
                 Toggle(
+                    "iCloud",
+                    isOn: Binding(
+                        get: { store.isCloudSyncEnabled },
+                        set: { store.setCloudSyncEnabled($0) }
+                    )
+                )
+                .toggleStyle(.checkbox)
+                .controlSize(.small)
+                .font(.caption)
+                .help(cloudSyncHelp)
+
+                Toggle(
                     "开机启动",
                     isOn: Binding(
                         get: { launchAtLogin.isEnabled },
@@ -348,6 +360,21 @@ struct DashboardView: View {
             return "关闭后，CodeUsage 将不再随 Mac 登录自动启动。"
         }
         return "开启后，登录 Mac 时会自动启动 CodeUsage。"
+    }
+
+    private var cloudSyncHelp: String {
+        switch store.cloudSyncStatus {
+        case .disabled:
+            return "开启后，只把用量展示快照同步到你的 iCloud 私有数据库。"
+        case .idle:
+            return "已开启；下次刷新后会同步用量快照。"
+        case .syncing:
+            return "正在同步用量快照到 iCloud…"
+        case .synced(let date):
+            return "最近同步于 \(date.formatted(date: .omitted, time: .shortened))。"
+        case .unavailable(let message):
+            return message
+        }
     }
 
     private func openGitHubRepository() {
@@ -810,20 +837,21 @@ private struct ProviderCard: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 if let timeline {
-                    Text(groupTimelineText(timeline))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    HStack(spacing: 3) {
+                        Text(timeline.deadline)
+                            .foregroundStyle(.secondary)
+                        if let suggested = timeline.suggestedPercent {
+                            Text("·")
+                                .foregroundStyle(.secondary)
+                            Text("建议 \(suggested)%")
+                                .foregroundStyle(suggestedUsageColor)
+                        }
+                    }
+                    .font(.system(size: 9, weight: .medium))
+                    .monospacedDigit()
                 }
             }
         }
-    }
-
-    private func groupTimelineText(_ timeline: SharedMetricTimeline) -> String {
-        if let suggested = timeline.suggestedPercent {
-            return "\(timeline.deadline) · 建议 \(suggested)%"
-        }
-        return timeline.deadline
     }
 
     private func metricGroupTitle(_ group: UsageMetric.Group) -> String {

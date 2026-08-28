@@ -9,6 +9,7 @@ swiftc \
   -module-cache-path "$CACHE_DIR" \
   -parse-as-library \
   "$PROJECT_DIR/Sources/CodeUsage/Models.swift" \
+  "$PROJECT_DIR/Sources/CodeUsage/CloudSync.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/SubscriptionSimulation.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/ProcessUtils.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/CodexProvider.swift" \
@@ -17,6 +18,8 @@ swiftc \
   "$PROJECT_DIR/Sources/CodeUsage/KiroProvider.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/QoderProvider.swift" \
   "$PROJECT_DIR/Scripts/SelfTest.swift" \
+  -framework CloudKit \
+  -framework Security \
   -o "$CACHE_DIR/CodeUsageSelfTest"
 
 "$CACHE_DIR/CodeUsageSelfTest"

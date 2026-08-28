@@ -8,7 +8,13 @@ let package = Package(
         .executable(name: "CodeUsage", targets: ["CodeUsage"])
     ],
     targets: [
-        .executableTarget(name: "CodeUsage")
+        .executableTarget(
+            name: "CodeUsage",
+            linkerSettings: [
+                .linkedFramework("CloudKit"),
+                .linkedFramework("Security")
+            ]
+        )
     ],
     swiftLanguageModes: [.v5]
 )

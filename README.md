@@ -22,6 +22,7 @@ Project homepage: <https://github.com/van-fe/code-usage>
 - Separate Cursor plan usage from on-demand spending; personal plans show current-period spending, while team and enterprise plans distinguish personal and organization spending.
 - Provide an isolated subscription simulation mode for checking free, personal, team, and enterprise layouts.
 - Launch automatically at login, with an option to disable it at any time from the bottom of the panel.
+- Optionally sync a reduced usage snapshot through iCloud for future iPhone and widget clients.
 - Open the CodeUsage project homepage from the GitHub button at the bottom of the panel.
 - Show a clear empty state and guidance when no supported tools are detected.
 - No telemetry, and no login tokens are stored, logged, or printed.
@@ -114,7 +115,7 @@ CodeUsage reads existing sign-in states locally and sends requests only to each 
 - **Kiro**: reads local sign-in records from Kiro IDE or CLI and uses only short-lived access tokens; it does not use refresh tokens or read device registration keys or browser cookies.
 - **Qoder**: first calls the local usage control interface of the signed-in Qoder CLI. If the CLI is unavailable, it uses the owner- and permission-validated `.info.json` and Unix socket to call the Qoder IDE JSON-RPC service. Qoder handles authentication; CodeUsage does not read, decrypt, or save Qoder tokens.
 
-The app contains no telemetry and does not upload usage data to a CodeUsage server. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
+The app contains no telemetry and does not upload usage data to a CodeUsage server. iCloud sync is off by default. When explicitly enabled, it writes only provider names, plan names, usage metrics, percentages, amounts or counts, and refresh timestamps to the user's private CloudKit database. Access tokens, refresh tokens, cookies, local databases, file paths, raw command output, and raw server responses are excluded from the sync model. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
 
 ## Build from Source
 

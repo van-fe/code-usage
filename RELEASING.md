@@ -43,7 +43,32 @@ GitHub Actions 不保存或使用任何 Apple 凭证。PR 和 `main` 分支会�
    export CODEUSAGE_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)'
    export CODEUSAGE_BUNDLE_IDENTIFIER='com.example.CodeUsage'
    export CODEUSAGE_NOTARY_PROFILE='CodeUsage-notary'
+   export CODEUSAGE_PROVISIONING_PROFILE="$HOME/Downloads/CodeUsage_Developer_ID.provisionprofile"
    ```
+
+## CloudKit 发布前配置
+
+CodeUsage 的正式 Bundle ID 是 `com.van-fe.CodeUsage`，iCloud Container 是 `iCloud.com.van-fe.CodeUsage`。Apple Developer 后台需让该 App ID 启用 iCloud/CloudKit 并关联这个 Container，然后创建与该 App ID 对应的 **Developer ID provisioning profile**。Profile 只保存在发布者本机，不提交到 GitHub。
+
+CloudKit Production 环境需要先存在 `UsageSnapshot` Record Type，字段如下：
+
+| 字段 | CloudKit 类型 |
+| --- | --- |
+| `provider` | String |
+| `schemaVersion` | Int(64) |
+| `updatedAt` | Date/Time |
+| `payload` | Bytes |
+
+在 CloudKit Console 中确认 Development schema 后，将 schema 部署到 Production。正式发布脚本固定使用 `Config/CodeUsage.entitlements` 中的 Production 环境；如果 Profile 缺少 Bundle ID、CloudKit、iCloud Container 或 Production 环境，脚本会在签名前终止。
+
+GitHub Actions 不持有 provisioning profile，因此 CI 构建仍为 ad-hoc 签名，运行时不会获得 iCloud 权限。这是预期行为；只有本机正式签名并公证的发布包启用 CloudKit。
+ad-hoc 构建仍使用正式 Bundle ID `com.van-fe.CodeUsage`，以确保本机偏好设置和后续升级路径一致，但不会附带受限的 iCloud entitlements。
+
+首次配置或更换 Profile 后，可在不构建、不签名、不提交公证的情况下验证环境：
+
+```bash
+./Scripts/release_local.sh --validate-config
+```
 
 ## 正式发布
 
@@ -54,7 +79,7 @@ git checkout vX.Y.Z
 ./Scripts/release_local.sh
 ```
 
-脚本会构建 Universal App、使用 Hardened Runtime 和安全时间戳签名、完成 App 与 DMG 公证、Staple 票据并执行 Gatekeeper 校验。默认不会连接或修改 GitHub。
+脚本会校验并嵌入 Developer ID provisioning profile，使用 CloudKit entitlements、Hardened Runtime 和安全时间戳签名，完成 App 与 DMG 公证、Staple 票据并执行 Gatekeeper 校验。默认不会连接或修改 GitHub。
 
 确认产物后，显式上传到已存在的 GitHub Release：
 

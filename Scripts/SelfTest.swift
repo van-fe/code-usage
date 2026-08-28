@@ -9,6 +9,7 @@ struct SelfTest {
         usageErrorsIdentifySignInFailures()
         codexIdentifiesSignInFailures()
         providerArchiveRoundTripsKnownProviders()
+        try cloudSnapshotContainsOnlyDisplayData()
         try cursorMapsReportedMetrics()
         try cursorCalculatesTotalWhenMissing()
         try cursorMapsOnDemandUsage()
@@ -113,6 +114,36 @@ struct SelfTest {
         let decoded = ProviderArchive.decode(["qoder", "codex", "removed-provider"])
         precondition(decoded == Set([.codex, .qoder]))
         precondition(ProviderArchive.encode(decoded) == ["codex", "qoder"])
+    }
+
+    private static func cloudSnapshotContainsOnlyDisplayData() throws {
+        let fetchedAt = Date(timeIntervalSince1970: 1_900_000_000)
+        let source = ProviderSnapshot(
+            provider: .cursor,
+            planName: "Pro",
+            metrics: [UsageMetric(
+                id: "total",
+                title: "套餐总用量",
+                usedPercent: 25,
+                deadlineAt: fetchedAt.addingTimeInterval(86_400),
+                group: .included,
+                value: .usd(usedCents: 2500, limitCents: 10_000)
+            )],
+            fetchedAt: fetchedAt,
+            note: "raw-token-must-not-sync",
+            subscriptionCategory: .individual
+        )
+        let snapshot = CloudUsageSnapshot(snapshot: source)
+        let data = try snapshot.encoded()
+        let encoded = String(decoding: data, as: UTF8.self)
+        precondition(!encoded.contains("raw-token-must-not-sync"))
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        let decoded = try decoder.decode(CloudUsageSnapshot.self, from: data)
+        precondition(decoded == snapshot)
+        precondition(decoded.provider == "cursor")
+        precondition(decoded.metrics.first?.usedPercent == 25)
     }
 
     private static func cursorMapsReportedMetrics() throws {

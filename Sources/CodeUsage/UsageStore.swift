@@ -17,6 +17,8 @@ final class UsageStore: ObservableObject {
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastUpdated: Date?
     @Published private(set) var simulationCategory: SubscriptionCategory?
+    @Published private(set) var isCloudSyncEnabled: Bool
+    @Published private(set) var cloudSyncStatus: CloudSyncStatus
 
     private let defaults: UserDefaults
     private let codex = CodexProvider()
@@ -24,10 +26,13 @@ final class UsageStore: ObservableObject {
     private let claude = ClaudeCodeProvider()
     private let kiro = KiroProvider()
     private let qoder = QoderProvider()
+    private let cloudSync = CloudUsageSyncService()
     private var refreshLoop: Task<Void, Never>?
+    private var cloudSyncTask: Task<Void, Never>?
     private var refreshAfterCurrent = false
     private let cursorIndividualLimitKey = "cursor.onDemand.personalLimitCents.v1"
     private let archivedProvidersKey = "providers.archived.v1"
+    private let cloudSyncEnabledKey = "icloud.sync.enabled.v1"
 
     init(
         defaults: UserDefaults = .standard,
@@ -35,6 +40,10 @@ final class UsageStore: ObservableObject {
     ) {
         self.defaults = defaults
         self.simulationCategory = simulationCategory
+        let cloudSyncEnabled = simulationCategory == nil
+            && defaults.bool(forKey: "icloud.sync.enabled.v1")
+        self.isCloudSyncEnabled = cloudSyncEnabled
+        self.cloudSyncStatus = cloudSyncEnabled ? .idle : .disabled
         self.archivedProviders = ProviderArchive.decode(
             defaults.stringArray(forKey: "providers.archived.v1") ?? []
         )
@@ -123,11 +132,13 @@ final class UsageStore: ObservableObject {
             })
         }
 
+        var successfulSnapshots: [ProviderSnapshot] = []
         for task in tasks {
             let result = await task.value
             switch result {
             case .success(let snapshot):
                 states[snapshot.provider] = ProviderDisplayState(snapshot: snapshot)
+                successfulSnapshots.append(snapshot)
             case .failure(let failure):
                 var state = states[failure.provider] ?? ProviderDisplayState()
                 state.errorMessage = failure.message
@@ -138,6 +149,7 @@ final class UsageStore: ObservableObject {
         }
         lastUpdated = Date()
         isRefreshing = false
+        scheduleCloudSync(successfulSnapshots)
         if refreshAfterCurrent {
             refreshAfterCurrent = false
             await refresh()
@@ -238,6 +250,19 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    func setCloudSyncEnabled(_ enabled: Bool) {
+        guard simulationCategory == nil, enabled != isCloudSyncEnabled else { return }
+        isCloudSyncEnabled = enabled
+        defaults.set(enabled, forKey: cloudSyncEnabledKey)
+        cloudSyncTask?.cancel()
+        if enabled {
+            cloudSyncStatus = .idle
+            scheduleCloudSync(states.values.compactMap(\.snapshot))
+        } else {
+            cloudSyncStatus = .disabled
+        }
+    }
+
     var cursorIndividualLimitDollars: Double? {
         cursorIndividualLimitCents.map { Double($0) / 100 }
     }
@@ -246,6 +271,29 @@ final class UsageStore: ObservableObject {
         archivedProviders = providers
         guard simulationCategory == nil else { return }
         defaults.set(ProviderArchive.encode(providers), forKey: archivedProvidersKey)
+    }
+
+    private func scheduleCloudSync(_ snapshots: [ProviderSnapshot]) {
+        guard isCloudSyncEnabled, !snapshots.isEmpty else { return }
+        let payloads = snapshots.map(CloudUsageSnapshot.init)
+        cloudSyncTask?.cancel()
+        cloudSyncTask = Task { [weak self] in
+            guard let self else { return }
+            self.cloudSyncStatus = .syncing
+            do {
+                try await self.cloudSync.save(payloads)
+                guard !Task.isCancelled else { return }
+                self.cloudSyncStatus = .synced(Date())
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.cloudSyncStatus = .unavailable(
+                    (error as? LocalizedError)?.errorDescription
+                        ?? error.localizedDescription
+                )
+            }
+        }
     }
 
     func menuBarText(for providers: [ProviderKind]) -> String {

@@ -6,6 +6,10 @@ APP_DIR="$PROJECT_DIR/dist/CodeUsage.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 BUILD_DIR="$PROJECT_DIR/.build-package"
 VERSION_FILE="$PROJECT_DIR/version.json"
+MODULE_CACHE_DIR="${CLANG_MODULE_CACHE_PATH:-$PROJECT_DIR/.cache/clang-module-cache}"
+
+mkdir -p "$MODULE_CACHE_DIR"
+export CLANG_MODULE_CACHE_PATH="$MODULE_CACHE_DIR"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
   echo "Missing version file: $VERSION_FILE" >&2
@@ -29,7 +33,7 @@ if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
   exit 1
 fi
 
-BUNDLE_IDENTIFIER="${CODEUSAGE_BUNDLE_IDENTIFIER:-com.local.CodeUsage}"
+BUNDLE_IDENTIFIER="${CODEUSAGE_BUNDLE_IDENTIFIER:-com.van-fe.CodeUsage}"
 if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
   echo "Bundle identifier cannot be empty" >&2
   exit 1
