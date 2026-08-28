@@ -1,18 +1,38 @@
+import Darwin
 import Foundation
+
+private enum KiroAuthSource: Sendable {
+    case jsonFile(path: String, originalData: Data)
+    case cliDatabase(path: String, key: String, originalData: Data)
+}
 
 private struct KiroAuth: Sendable {
     let accessToken: String
+    let refreshToken: String?
     let profileArn: String?
     let authMethod: String?
     let provider: String?
     let region: String
     let expiresAt: Date?
     let origin: String
+    let source: KiroAuthSource
+}
+
+private enum KiroRefreshResult {
+    case refreshed(KiroAuth)
+    case unavailable
+    case rejected
 }
 
 actor KiroProvider {
     private static let ideTokenPath = "~/.aws/sso/cache/kiro-auth-token.json"
     private static let cliDatabasePath = "~/Library/Application Support/kiro-cli/data.sqlite3"
+    private static let cliTokenKeys = [
+        "kirocli:social:token",
+        "kirocli:odic:token",
+        "kirocli:external-idp:token",
+        "codewhisperer:odic:token"
+    ]
 
     func fetch() async throws -> ProviderSnapshot {
         let authCandidates = try await Task.detached(priority: .utility) {
@@ -20,30 +40,56 @@ actor KiroProvider {
         }.value
 
         var lastRejectedAuth: KiroAuth?
-        for auth in authCandidates {
-            var response = try await requestUsage(auth: auth, legacyPath: false)
-            if response.statusCode == 404 {
-                response = try await requestUsage(auth: auth, legacyPath: true)
+        for storedAuth in authCandidates {
+            var auth = storedAuth
+            var refreshAttempted = false
+
+            if Self.shouldRefresh(auth) {
+                refreshAttempted = true
+                switch try await refreshCredential(auth) {
+                case .refreshed(let refreshedAuth):
+                    auth = refreshedAuth
+                case .unavailable, .rejected:
+                    lastRejectedAuth = auth
+                    continue
+                }
             }
-            if (200..<300).contains(response.statusCode) {
-                let provider = auth.provider?.lowercased()
-                let authMethod = auth.authMethod?.lowercased()
-                let supportsPurchasedAddOns = authMethod == "social" || provider == "builderid"
-                return try Self.map(
-                    usageData: response.data,
-                    includePurchasedAddOns: supportsPurchasedAddOns
-                )
+
+            while true {
+                var response = try await requestUsage(auth: auth, legacyPath: false)
+                if response.statusCode == 404 {
+                    response = try await requestUsage(auth: auth, legacyPath: true)
+                }
+                if (200..<300).contains(response.statusCode) {
+                    let provider = auth.provider?.lowercased()
+                    let authMethod = auth.authMethod?.lowercased()
+                    let supportsPurchasedAddOns = authMethod == "social" || provider == "builderid"
+                    return try Self.map(
+                        usageData: response.data,
+                        includePurchasedAddOns: supportsPurchasedAddOns
+                    )
+                }
+                let serviceReason = Self.serviceReason(from: response.data)
+                if response.statusCode == 403,
+                   serviceReason?.uppercased() == "FEATURE_NOT_SUPPORTED" {
+                    throw UsageError.invalidResponse("Kiro 当前登录方式或计划不支持读取个人 credits")
+                }
+                if response.statusCode == 401 || response.statusCode == 403 {
+                    if !refreshAttempted {
+                        refreshAttempted = true
+                        switch try await refreshCredential(auth) {
+                        case .refreshed(let refreshedAuth):
+                            auth = refreshedAuth
+                            continue
+                        case .unavailable, .rejected:
+                            break
+                        }
+                    }
+                    lastRejectedAuth = auth
+                    break
+                }
+                throw UsageError.requestFailed("Kiro 用量请求失败（HTTP \(response.statusCode)）")
             }
-            let serviceReason = Self.serviceReason(from: response.data)
-            if response.statusCode == 403,
-               serviceReason?.uppercased() == "FEATURE_NOT_SUPPORTED" {
-                throw UsageError.invalidResponse("Kiro 当前登录方式或计划不支持读取个人 credits")
-            }
-            if response.statusCode == 401 || response.statusCode == 403 {
-                lastRejectedAuth = auth
-                continue
-            }
-            throw UsageError.requestFailed("Kiro 用量请求失败（HTTP \(response.statusCode)）")
         }
 
         let expired = lastRejectedAuth?.expiresAt.map { $0 <= Date() } ?? false
@@ -55,6 +101,10 @@ actor KiroProvider {
     private struct HTTPResult: Sendable {
         let statusCode: Int
         let data: Data
+    }
+
+    private static func shouldRefresh(_ auth: KiroAuth, now: Date = Date()) -> Bool {
+        auth.expiresAt.map { $0 <= now.addingTimeInterval(60) } ?? false
     }
 
     private func requestUsage(auth: KiroAuth, legacyPath: Bool) async throws -> HTTPResult {
@@ -111,6 +161,83 @@ actor KiroProvider {
         }
     }
 
+    private func refreshCredential(_ auth: KiroAuth) async throws -> KiroRefreshResult {
+        guard let refreshToken = auth.refreshToken, !refreshToken.isEmpty else {
+            return .unavailable
+        }
+        let provider = auth.provider?.lowercased()
+        let authMethod = auth.authMethod?.lowercased()
+        guard authMethod == "social" || provider == "google" || provider == "github" else {
+            return .unavailable
+        }
+
+        var request = URLRequest(
+            url: URL(string: "https://prod.us-east-1.auth.desktop.kiro.dev/refreshToken")!
+        )
+        request.httpMethod = "POST"
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(Self.refreshUserAgent(), forHTTPHeaderField: "User-Agent")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "refreshToken": refreshToken
+        ])
+
+        let result: HTTPResult
+        do {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.urlCache = nil
+            configuration.httpCookieStorage = nil
+            let (data, response) = try await URLSession(configuration: configuration).data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw UsageError.invalidResponse("Kiro 登录续期返回了无效响应")
+            }
+            result = HTTPResult(statusCode: http.statusCode, data: data)
+        } catch let error as UsageError {
+            throw error
+        } catch {
+            throw UsageError.requestFailed("无法续期 Kiro 登录：\(error.localizedDescription)")
+        }
+
+        if [400, 401, 403].contains(result.statusCode) {
+            return .rejected
+        }
+        guard (200..<300).contains(result.statusCode) else {
+            throw UsageError.requestFailed("Kiro 登录续期失败（HTTP \(result.statusCode)）")
+        }
+
+        let refreshedData = try Self.mergedRefreshedCredentialData(
+            originalData: Self.originalData(for: auth.source),
+            responseData: result.data
+        )
+        let persisted = try await Task.detached(priority: .utility) {
+            try Self.persistRefreshedCredential(
+                refreshedData,
+                expectedRefreshToken: refreshToken,
+                source: auth.source
+            )
+        }.value
+        guard let refreshedAuth = Self.auth(
+            from: persisted.data,
+            fallbackProfileArn: auth.profileArn,
+            fallbackAuthMethod: auth.authMethod,
+            fallbackProvider: auth.provider,
+            origin: auth.origin,
+            source: persisted.source
+        ) else {
+            throw UsageError.invalidResponse("Kiro 登录续期响应格式不正确")
+        }
+        return .refreshed(refreshedAuth)
+    }
+
+    private static func refreshUserAgent() -> String {
+        let paths = ["/Applications/Kiro.app", ProcessUtils.expandedHome("~/Applications/Kiro.app")]
+        let version = paths.lazy.compactMap { path in
+            Bundle(path: path)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        }.first ?? "unknown"
+        return "KiroIDE-\(version)-CodeUsage"
+    }
+
     private static func readAuthCandidates() throws -> [KiroAuth] {
         let environment = ProcessInfo.processInfo.environment
         let tokenPath = environment["KIRO_AUTH_TOKEN_PATH"]
@@ -119,8 +246,12 @@ actor KiroProvider {
         let profileArn = readStoredProfileArn()
         var candidates: [KiroAuth] = []
 
-        if let object = try? readSecureJSONObject(at: expandedTokenPath),
-           let auth = auth(from: object, fallbackProfileArn: profileArn) {
+        if let data = try? readSecureData(at: expandedTokenPath),
+           let auth = auth(
+               from: data,
+               fallbackProfileArn: profileArn,
+               source: .jsonFile(path: expandedTokenPath, originalData: data)
+           ) {
             candidates.append(auth)
         }
 
@@ -146,6 +277,11 @@ actor KiroProvider {
     }
 
     private static func readSecureJSONObject(at path: String) throws -> Any {
+        let data = try readSecureData(at: path)
+        return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+    }
+
+    private static func readSecureData(at path: String) throws -> Data {
         let url = URL(fileURLWithPath: path)
         guard FileManager.default.fileExists(atPath: path) else {
             throw UsageError.notSignedIn("Kiro 尚未登录")
@@ -157,22 +293,15 @@ actor KiroProvider {
         guard (values.fileSize ?? 0) <= 2_000_000 else {
             throw UsageError.invalidResponse("Kiro 登录文件异常过大")
         }
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+        return try Data(contentsOf: url, options: .mappedIfSafe)
     }
 
     private static func readCLIAuthCandidates(
         databasePath: String,
         fallbackProfileArn: String?
     ) -> [KiroAuth] {
-        guard FileManager.default.fileExists(atPath: databasePath) else { return [] }
-        let tokenKeys = [
-            "kirocli:social:token",
-            "kirocli:odic:token",
-            "kirocli:external-idp:token",
-            "codewhisperer:odic:token"
-        ]
-        let quotedKeys = tokenKeys.map { "'\($0)'" }.joined(separator: ",")
+        guard isSecureRegularFile(at: databasePath, maximumSize: 100_000_000) else { return [] }
+        let quotedKeys = cliTokenKeys.map { "'\($0)'" }.joined(separator: ",")
         // sqlite3's shell escapes ASCII control characters in query output on
         // newer versions (for example, char(31) becomes the two bytes "^_").
         // Use a printable delimiter that cannot occur in either a known key or
@@ -186,10 +315,6 @@ actor KiroProvider {
 
         var parsedByKey: [String: KiroAuth] = [:]
         for record in parseCLIAuthRows(result.stdout) {
-            guard let object = try? JSONSerialization.jsonObject(
-                with: record.data,
-                options: [.fragmentsAllowed]
-            ) else { continue }
             let key = record.key
             let fallbackMethod: String?
             let fallbackProvider: String?
@@ -204,16 +329,21 @@ actor KiroProvider {
                 fallbackProvider = "BuilderId"
             }
             if let auth = auth(
-                from: object,
+                from: record.data,
                 fallbackProfileArn: fallbackProfileArn,
                 fallbackAuthMethod: fallbackMethod,
                 fallbackProvider: fallbackProvider,
-                origin: "KIRO_CLI"
+                origin: "KIRO_CLI",
+                source: .cliDatabase(
+                    path: databasePath,
+                    key: key,
+                    originalData: record.data
+                )
             ) {
                 parsedByKey[key] = auth
             }
         }
-        return tokenKeys.compactMap { parsedByKey[$0] }
+        return cliTokenKeys.compactMap { parsedByKey[$0] }
     }
 
     static func parseCLIAuthRows(_ output: String) -> [(key: String, data: Data)] {
@@ -242,11 +372,34 @@ actor KiroProvider {
     }
 
     private static func auth(
+        from data: Data,
+        fallbackProfileArn: String?,
+        fallbackAuthMethod: String? = nil,
+        fallbackProvider: String? = nil,
+        origin: String = "AI_EDITOR",
+        source: KiroAuthSource
+    ) -> KiroAuth? {
+        guard let object = try? JSONSerialization.jsonObject(
+            with: data,
+            options: [.fragmentsAllowed]
+        ) else { return nil }
+        return auth(
+            from: object,
+            fallbackProfileArn: fallbackProfileArn,
+            fallbackAuthMethod: fallbackAuthMethod,
+            fallbackProvider: fallbackProvider,
+            origin: origin,
+            source: source
+        )
+    }
+
+    private static func auth(
         from object: Any,
         fallbackProfileArn: String?,
         fallbackAuthMethod: String? = nil,
         fallbackProvider: String? = nil,
-        origin: String = "AI_EDITOR"
+        origin: String = "AI_EDITOR",
+        source: KiroAuthSource
     ) -> KiroAuth? {
         let accessToken: String?
         if let raw = object as? String, !raw.isEmpty, !raw.hasPrefix("{") {
@@ -256,6 +409,7 @@ actor KiroProvider {
         }
         guard let accessToken, !accessToken.isEmpty else { return nil }
 
+        let refreshToken = findString(named: ["refreshtoken"], in: object)
         let profileArn = findString(named: ["profilearn"], in: object) ?? fallbackProfileArn
         let provider = findString(named: ["provider"], in: object) ?? fallbackProvider
         let storedAuthMethod = findString(named: ["authmethod"], in: object) ?? fallbackAuthMethod
@@ -270,13 +424,257 @@ actor KiroProvider {
 
         return KiroAuth(
             accessToken: accessToken,
+            refreshToken: refreshToken,
             profileArn: profileArn,
             authMethod: authMethod,
             provider: provider,
             region: region,
             expiresAt: expiresAt,
-            origin: origin
+            origin: origin,
+            source: source
         )
+    }
+
+    static func mergedRefreshedCredentialData(
+        originalData: Data,
+        responseData: Data,
+        now: Date = Date()
+    ) throws -> Data {
+        guard var credential = try? JSONSerialization.jsonObject(
+            with: originalData,
+            options: [.fragmentsAllowed]
+        ) as? [String: Any],
+        let response = try? JSONSerialization.jsonObject(
+            with: responseData,
+            options: [.fragmentsAllowed]
+        ) as? [String: Any],
+        let accessToken = findString(named: ["accesstoken"], in: response),
+        !accessToken.isEmpty,
+        let currentRefreshToken = findString(named: ["refreshtoken"], in: credential),
+        !currentRefreshToken.isEmpty else {
+            throw UsageError.invalidResponse("Kiro 登录续期响应格式不正确")
+        }
+
+        let usesSnakeCase = credential.keys.contains { $0.contains("_") }
+        setCredentialValue(
+            accessToken,
+            normalizedName: "accesstoken",
+            camelCaseName: "accessToken",
+            snakeCaseName: "access_token",
+            usesSnakeCase: usesSnakeCase,
+            in: &credential
+        )
+        let refreshToken = findString(named: ["refreshtoken"], in: response)
+            .flatMap { $0.isEmpty ? nil : $0 } ?? currentRefreshToken
+        setCredentialValue(
+            refreshToken,
+            normalizedName: "refreshtoken",
+            camelCaseName: "refreshToken",
+            snakeCaseName: "refresh_token",
+            usesSnakeCase: usesSnakeCase,
+            in: &credential
+        )
+
+        let expiresAt: Date?
+        if let explicitExpiry = findValue(named: ["expiresat", "expiration", "expiry"], in: response) {
+            expiresAt = DateParsing.date(from: explicitExpiry)
+        } else if let expiresIn = numericValue(
+            findValue(named: ["expiresin"], in: response)
+        ), expiresIn.isFinite, expiresIn > 0 {
+            expiresAt = now.addingTimeInterval(expiresIn)
+        } else {
+            expiresAt = nil
+        }
+        guard let expiresAt else {
+            throw UsageError.invalidResponse("Kiro 登录续期响应缺少有效期")
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        setCredentialValue(
+            formatter.string(from: expiresAt),
+            normalizedName: "expiresat",
+            camelCaseName: "expiresAt",
+            snakeCaseName: "expires_at",
+            usesSnakeCase: usesSnakeCase,
+            in: &credential
+        )
+
+        if let profileArn = findString(named: ["profilearn"], in: response), !profileArn.isEmpty {
+            setCredentialValue(
+                profileArn,
+                normalizedName: "profilearn",
+                camelCaseName: "profileArn",
+                snakeCaseName: "profile_arn",
+                usesSnakeCase: usesSnakeCase,
+                in: &credential
+            )
+        }
+
+        return try JSONSerialization.data(
+            withJSONObject: credential,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+    }
+
+    private static func setCredentialValue(
+        _ value: Any,
+        normalizedName: String,
+        camelCaseName: String,
+        snakeCaseName: String,
+        usesSnakeCase: Bool,
+        in credential: inout [String: Any]
+    ) {
+        let key = credential.keys.first { normalizedKey($0) == normalizedName }
+            ?? (usesSnakeCase ? snakeCaseName : camelCaseName)
+        credential[key] = value
+    }
+
+    private static func numericValue(_ value: Any?) -> Double? {
+        if let number = value as? NSNumber { return number.doubleValue }
+        if let string = value as? String { return Double(string) }
+        return nil
+    }
+
+    private static func originalData(for source: KiroAuthSource) -> Data {
+        switch source {
+        case .jsonFile(_, let originalData), .cliDatabase(_, _, let originalData):
+            return originalData
+        }
+    }
+
+    private static func persistRefreshedCredential(
+        _ data: Data,
+        expectedRefreshToken: String,
+        source: KiroAuthSource
+    ) throws -> (data: Data, source: KiroAuthSource) {
+        guard findStringInCredential(
+            named: ["refreshtoken"],
+            data: originalData(for: source)
+        ) == expectedRefreshToken else {
+            throw UsageError.requestFailed("Kiro 登录凭证在续期前已发生变化")
+        }
+        switch source {
+        case .jsonFile(let path, let originalData):
+            let storedData = try replaceSecureCredentialFile(
+                at: path,
+                expectedData: originalData,
+                replacementData: data
+            )
+            return (
+                storedData,
+                .jsonFile(path: path, originalData: storedData)
+            )
+
+        case .cliDatabase(let path, let key, let originalData):
+            guard cliTokenKeys.contains(key),
+                  isSecureRegularFile(at: path, maximumSize: 100_000_000) else {
+                throw UsageError.invalidResponse("Kiro CLI 登录数据库不是安全的常规文件")
+            }
+            let sql = """
+            UPDATE auth_kv
+            SET value = CAST(X'\(hexString(data))' AS TEXT)
+            WHERE key = '\(key)' AND hex(value) = '\(hexString(originalData))';
+            SELECT changes();
+            """
+            guard let input = sql.data(using: .utf8),
+                  let result = try? ProcessUtils.run(
+                      executable: "/usr/bin/sqlite3",
+                      arguments: ["-batch", path],
+                      standardInput: input,
+                      timeout: 5
+                  ),
+                  result.status == 0 else {
+                throw UsageError.requestFailed("无法保存 Kiro CLI 登录续期")
+            }
+            if result.stdout.split(whereSeparator: \Character.isNewline).last == "1" {
+                return (
+                    data,
+                    .cliDatabase(path: path, key: key, originalData: data)
+                )
+            }
+            guard let storedData = readCLICredentialData(databasePath: path, key: key),
+                  findStringInCredential(named: ["refreshtoken"], data: storedData) != nil else {
+                throw UsageError.requestFailed("Kiro CLI 登录凭证在续期时发生变化")
+            }
+            return (
+                storedData,
+                .cliDatabase(path: path, key: key, originalData: storedData)
+            )
+        }
+    }
+
+    private static func replaceSecureCredentialFile(
+        at path: String,
+        expectedData: Data,
+        replacementData: Data
+    ) throws -> Data {
+        let currentData = try readSecureData(at: path)
+        guard currentData == expectedData else { return currentData }
+
+        let url = URL(fileURLWithPath: path)
+        let temporaryURL = url.deletingLastPathComponent().appendingPathComponent(
+            ".\(url.lastPathComponent).\(UUID().uuidString).tmp"
+        )
+        defer { try? FileManager.default.removeItem(at: temporaryURL) }
+        do {
+            try replacementData.write(to: temporaryURL, options: [.withoutOverwriting])
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: temporaryURL.path
+            )
+            let latestData = try readSecureData(at: path)
+            guard latestData == expectedData else { return latestData }
+            let status = temporaryURL.path.withCString { sourcePath in
+                path.withCString { destinationPath in
+                    Darwin.rename(sourcePath, destinationPath)
+                }
+            }
+            guard status == 0 else {
+                throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+            }
+            return replacementData
+        } catch let error as UsageError {
+            throw error
+        } catch {
+            throw UsageError.requestFailed("无法保存 Kiro 登录续期：\(error.localizedDescription)")
+        }
+    }
+
+    private static func readCLICredentialData(databasePath: String, key: String) -> Data? {
+        guard cliTokenKeys.contains(key),
+              let result = try? ProcessUtils.run(
+                  executable: "/usr/bin/sqlite3",
+                  arguments: [
+                      "-readonly",
+                      databasePath,
+                      "SELECT hex(value) FROM auth_kv WHERE key = '\(key)' LIMIT 1;"
+                  ],
+                  timeout: 5
+              ),
+              result.status == 0 else { return nil }
+        return data(fromHex: result.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private static func findStringInCredential(named names: Set<String>, data: Data) -> String? {
+        guard let object = try? JSONSerialization.jsonObject(
+            with: data,
+            options: [.fragmentsAllowed]
+        ) else { return nil }
+        return findString(named: names, in: object)
+    }
+
+    private static func isSecureRegularFile(at path: String, maximumSize: Int) -> Bool {
+        let url = URL(fileURLWithPath: path)
+        guard let values = try? url.resourceValues(
+            forKeys: [.isSymbolicLinkKey, .isRegularFileKey, .fileSizeKey]
+        ) else { return false }
+        return values.isSymbolicLink != true
+            && values.isRegularFile == true
+            && (values.fileSize ?? maximumSize + 1) <= maximumSize
+    }
+
+    private static func hexString(_ data: Data) -> String {
+        data.map { String(format: "%02X", $0) }.joined()
     }
 
     private static func findString(named names: Set<String>, in object: Any) -> String? {

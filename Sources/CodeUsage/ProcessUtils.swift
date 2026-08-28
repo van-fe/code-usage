@@ -22,16 +22,23 @@ enum ProcessUtils {
     static func run(
         executable: String,
         arguments: [String],
+        standardInput: Data? = nil,
         timeout: TimeInterval = 8
     ) throws -> ProcessResult {
         let process = Process()
         let output = Pipe()
+        let input = standardInput.map { _ in Pipe() }
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
+        process.standardInput = input
 
         try process.run()
+        if let standardInput, let input {
+            try input.fileHandleForWriting.write(contentsOf: standardInput)
+            try input.fileHandleForWriting.close()
+        }
         let semaphore = DispatchSemaphore(value: 0)
         process.terminationHandler = { _ in semaphore.signal() }
         if semaphore.wait(timeout: .now() + timeout) == .timedOut {

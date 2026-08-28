@@ -19,6 +19,9 @@ struct SelfTest {
         try cursorLabelsPersonalAndTeamUsage()
         try claudeMapsWeeklyAndSessionWindows()
         kiroParsesCLIAuthRows()
+        try kiroMergesRefreshedIDECredential()
+        try kiroMergesRefreshedCLICredential()
+        try kiroRejectsMalformedRefreshResponse()
         try kiroMapsPreciseCreditsAndExtras()
         try kiroFallsBackToLegacyLimits()
         try kiroRejectsMissingQuota()
@@ -448,6 +451,90 @@ struct SelfTest {
         precondition(rows[0].key == "kirocli:social:token")
         let object = try? JSONSerialization.jsonObject(with: rows[0].data) as? [String: String]
         precondition(object?["access_token"] == "t")
+    }
+
+    private static func kiroMergesRefreshedIDECredential() throws {
+        let original = """
+        {
+          "accessToken": "old-access",
+          "refreshToken": "old-refresh",
+          "expiresAt": "2020-01-01T00:00:00Z",
+          "profileArn": "old-profile",
+          "provider": "Google",
+          "authMethod": "social"
+        }
+        """.data(using: .utf8)!
+        let response = """
+        {
+          "accessToken": "new-access",
+          "refreshToken": "new-refresh",
+          "profileArn": "new-profile",
+          "expiresIn": 3600
+        }
+        """.data(using: .utf8)!
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let mergedData = try KiroProvider.mergedRefreshedCredentialData(
+            originalData: original,
+            responseData: response,
+            now: now
+        )
+        let merged = try JSONSerialization.jsonObject(with: mergedData) as! [String: Any]
+        precondition(merged["accessToken"] as? String == "new-access")
+        precondition(merged["refreshToken"] as? String == "new-refresh")
+        precondition(merged["profileArn"] as? String == "new-profile")
+        precondition(merged["provider"] as? String == "Google")
+        let expiry = DateParsing.date(from: merged["expiresAt"])
+        precondition(expiry == now.addingTimeInterval(3600))
+    }
+
+    private static func kiroMergesRefreshedCLICredential() throws {
+        let original = """
+        {
+          "access_token": "old-access",
+          "refresh_token": "keep-refresh",
+          "expires_at": "2020-01-01T00:00:00Z",
+          "profile_arn": "profile",
+          "provider": "google"
+        }
+        """.data(using: .utf8)!
+        let response = """
+        {
+          "accessToken": "new-access",
+          "expiresIn": "1800"
+        }
+        """.data(using: .utf8)!
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let mergedData = try KiroProvider.mergedRefreshedCredentialData(
+            originalData: original,
+            responseData: response,
+            now: now
+        )
+        let merged = try JSONSerialization.jsonObject(with: mergedData) as! [String: Any]
+        precondition(merged["access_token"] as? String == "new-access")
+        precondition(merged["refresh_token"] as? String == "keep-refresh")
+        precondition(merged["accessToken"] == nil)
+        let expiry = DateParsing.date(from: merged["expires_at"])
+        precondition(expiry == now.addingTimeInterval(1800))
+    }
+
+    private static func kiroRejectsMalformedRefreshResponse() throws {
+        let original = """
+        {"accessToken":"old","refreshToken":"refresh","expiresAt":"2020-01-01T00:00:00Z"}
+        """.data(using: .utf8)!
+        let response = """
+        {"accessToken":"new"}
+        """.data(using: .utf8)!
+        do {
+            _ = try KiroProvider.mergedRefreshedCredentialData(
+                originalData: original,
+                responseData: response
+            )
+            preconditionFailure("Kiro malformed refresh response should fail")
+        } catch let error as UsageError {
+            guard case .invalidResponse = error else {
+                preconditionFailure("Unexpected Kiro refresh error: \(error)")
+            }
+        }
     }
 
     private static func kiroFallsBackToLegacyLimits() throws {
