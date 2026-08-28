@@ -1,134 +1,130 @@
 # CodeUsage
 
+English | [简体中文](README.zh-CN.md)
+
 <p align="center">
-  <img src="Assets/AppIcon-1024.png" width="112" alt="CodeUsage 应用图标">
+  <img src="Assets/AppIcon-1024.png" width="112" alt="CodeUsage app icon">
 </p>
 
-CodeUsage 是一款轻量、原生的 macOS 菜单栏应用，用一个面板集中查看 Codex、Cursor、Claude Code、Kiro 和 Qoder 的用量与额度。
+CodeUsage is a lightweight, native macOS menu bar app that brings Codex, Cursor, Claude Code, Kiro, and Qoder usage and quota information together in one panel.
 
-项目主页：<https://github.com/van-fe/code-usage>
+Project homepage: <https://github.com/van-fe/code-usage>
 
-> CodeUsage 是非官方第三方工具，与 OpenAI、Cursor、Anthropic、AWS、Kiro 或 Qoder 没有隶属或背书关系。各名称与标识归其权利人所有。
+> CodeUsage is an unofficial third-party tool and is not affiliated with or endorsed by OpenAI, Cursor, Anthropic, AWS, Kiro, or Qoder. All names and marks belong to their respective owners.
 
-## 功能
+## Features
 
-- 在状态栏同时显示多个工具的图标与剩余百分比，可按工具独立显示或隐藏。
-- 点击状态栏打开右对齐面板，面板打开期间保持原生选中状态。
-- 一键刷新用量、一键打开对应应用；按钮具备悬浮和按下反馈。
-- 每 5 分钟自动刷新；请求失败时保留上次成功数据并标记为旧数据。
-- 在进度条中标出当前计费窗口的建议使用进度，帮助判断使用节奏。
-- 区分 Cursor 的套餐额度与按量付费；个人方案显示“本期消费”，团队或企业方案才区分个人与组织消费。
-- 提供隔离的订阅模拟模式，可依次检查免费、个人、团队与企业订阅的界面分组。
-- 支持登录 Mac 后自动启动，可随时在面板底部关闭。
-- 底部 GitHub 按钮可直接打开 CodeUsage 项目主页。
-- 未检测到受支持工具时显示清晰的空白状态和操作提示。
-- 无遥测，不保存、记录或输出登录令牌。
+- Show icons and remaining percentages for multiple tools in the menu bar, with independent visibility controls for each tool.
+- Open a right-aligned panel from the menu bar while preserving the native selected state.
+- Refresh usage or open the corresponding app with one click; buttons include hover and pressed feedback.
+- Refresh automatically every five minutes; when a request fails, retain the most recent successful data and mark it as stale.
+- Mark the suggested usage pace for the current billing window on each progress bar.
+- Separate Cursor plan usage from on-demand spending; personal plans show current-period spending, while team and enterprise plans distinguish personal and organization spending.
+- Provide an isolated subscription simulation mode for checking free, personal, team, and enterprise layouts.
+- Launch automatically at login, with an option to disable it at any time from the bottom of the panel.
+- Open the CodeUsage project homepage from the GitHub button at the bottom of the panel.
+- Show a clear empty state and guidance when no supported tools are detected.
+- No telemetry, and no login tokens are stored, logged, or printed.
 
-## 支持的工具
+## Supported Tools
 
-| 工具 | 显示内容 | 本机要求 |
+| Tool | Data shown | Local requirement |
 | --- | --- | --- |
-| Codex | 服务端返回的 5 小时、7 天、月度等套餐窗口，以及可用的额外 Credits | 安装并登录 Codex CLI、Codex App，或包含 Codex 的 ChatGPT App |
-| Cursor | 套餐内总用量、Auto、指定模型（API），以及个人和团队按量付费 | 安装并登录 Cursor |
-| Claude Code | 当前成员的 5 小时与 7 天订阅额度 | 安装并登录 Claude Code CLI |
-| Kiro | 个人套餐月度 Credits，以及接口明确返回的个人 Add-on | 安装并登录 Kiro IDE 或 Kiro CLI |
-| Qoder | 套餐 Credits、个人 Add-on 与组织共享 Credits | 安装并登录 Qoder IDE 或 Qoder CLI；仅安装 IDE 时需保持 IDE 运行 |
+| Codex | Server-provided 5-hour, 7-day, monthly, and other plan windows, plus available extra Credits | Install and sign in to Codex CLI, Codex App, or ChatGPT App with Codex |
+| Cursor | Total included usage, Auto, specified models (API), and personal or team on-demand spending | Install and sign in to Cursor |
+| Claude Code | The current member's 5-hour and 7-day subscription quotas | Install and sign in to Claude Code CLI |
+| Kiro | Monthly plan Credits and personal Add-ons explicitly returned by the API | Install and sign in to Kiro IDE or Kiro CLI |
+| Qoder | Plan Credits, personal Add-ons, and shared organization Credits | Install and sign in to Qoder IDE or Qoder CLI; keep the IDE running if only the IDE is installed |
 
-只会显示本机已检测到的工具。安装或登录状态发生变化后，可点击面板右上角的刷新按钮重新检测。
+Only tools detected on the current Mac are shown. After installing a tool or changing its sign-in state, click the refresh button in the upper-right corner of the panel to detect it again.
 
-## 用量口径
+## Usage Semantics
 
 ### Cursor
 
-Cursor 分为两组数据：
+Cursor data is divided into two groups:
 
-- **套餐内用量**：包含总用量、Auto 和指定模型（API）。Auto 与指定模型采用不同统计口径，不能直接相加。
-- **按量付费**：个人方案显示“本期消费”；只有确认是团队或企业方案时，才拆分“我的消费”和团队或组织总消费。
+- **Included usage**: total usage, Auto, and specified models (API). Auto and specified-model usage use different accounting methods and cannot be added together directly.
+- **On-demand spending**: personal plans show current-period spending. Separate personal and team or organization spending is shown only when the account is confirmed to be on a team or enterprise plan.
 
-如果 Cursor 没有返回消费上限，可以在 CodeUsage 中设置“显示预算”。这个值只用于计算进度条和剩余百分比，不会修改 Cursor 后台的消费上限，也不会阻止实际消费。设置后，状态栏优先显示按量付费的参考剩余比例；未设置时显示套餐总用量。
+If Cursor does not return a spending limit, you can set a display budget in CodeUsage. This value is used only to calculate the progress bar and remaining percentage. It does not change the spending limit in Cursor or stop actual spending. When set, the menu bar prioritizes the reference remaining percentage for on-demand spending; otherwise, it shows total plan usage.
 
-## 订阅模拟模式
+## Subscription Simulation Mode
 
-模拟模式不会读取或覆盖真实账号数据，用于按订阅类型检查界面：
+Simulation mode does not read or overwrite real account data. Use it to inspect the interface for each subscription type:
 
 ```bash
 open -a CodeUsage --args --subscription-simulation
 ```
 
-打开后可在面板顶部依次切换“免费试用”“个人用户”“团队用户”“企业用户”。退出并正常启动 CodeUsage 后，会自动恢复真实数据模式。
+After opening it, switch among Free Trial, Individual, Team, and Enterprise at the top of the panel. Quit and launch CodeUsage normally to return to real data automatically.
 
 ### Codex
 
-CodeUsage 按服务端实际返回的窗口显示 5 小时、7 天、月度等套餐内限额。Business 或 Enterprise 计划若返回个人上限或工作区 Credits，会另列在“额外 Credits”中。工作区余额不等于团队总预算，应用不会根据缺失字段反推团队百分比。
+CodeUsage shows the 5-hour, 7-day, monthly, and other included plan windows returned by the server. If a Business or Enterprise plan returns a personal limit or workspace Credits, those appear separately under Extra Credits. A workspace balance is not the same as a team-wide budget, and the app does not infer a team percentage from missing fields.
 
 ### Claude Code
 
-显示当前登录成员的订阅额度。Claude Team 通常按 seat 独立计量，并非团队共享池；普通 Claude Code OAuth 无权读取组织按量消费，因此 CodeUsage 不会伪造金额或团队预算。
+CodeUsage shows the subscription quota of the currently signed-in member. Claude Team usage is generally measured per seat rather than from a shared team pool. Standard Claude Code OAuth credentials cannot read organization on-demand spending, so CodeUsage does not invent an amount or team budget.
 
 ### Kiro
 
-显示个人套餐月度 Credits；只有在接口能够确认属于个人购买型账号时才显示 Add-on。Enterprise overage 需要管理员侧报表或 AWS 配额数据，不能从个人接口可靠推算。
+CodeUsage shows monthly personal plan Credits. Add-ons appear only when the API can confirm that they belong to an individually purchased account. Enterprise overage requires administrator reports or AWS quota data and cannot be inferred reliably from the personal API.
 
 ### Qoder
 
-安装了 Qoder CLI 时，CodeUsage 会优先通过 CLI 读取套餐 Credits、个人 Add-on 与组织共享 Credits，不要求 Qoder IDE 保持运行；CLI 不可用时再尝试 Qoder IDE 本机服务。额外额度以 Credits 计量，不换算成美元，也不会从普通用户登录态推断管理员 OpenAPI 数据。
+When Qoder CLI is installed, CodeUsage uses it first to read plan Credits, personal Add-ons, and shared organization Credits without requiring Qoder IDE to remain open. If the CLI is unavailable, CodeUsage falls back to the local Qoder IDE service. Extra quota is measured in Credits, not converted to US dollars, and administrator OpenAPI data is never inferred from a standard user session.
 
-Qoder 用量接口的 `expiresAt` 表示当前套餐 Credits 的到期/清零边界，因此界面显示“到期”，不会把它无条件描述为下一次重置；续费后的新周期额度由 Qoder 服务端另行发放。
+The `expiresAt` value from Qoder's usage API is the expiration or clearing boundary for the current plan Credits, so the interface labels it as “Expires” rather than always describing it as the next reset. Credits for a renewed period are issued separately by Qoder's server.
 
-## 建议使用量
+## Suggested Usage
 
-进度条上的绿色标记表示当前计费窗口建议达到的累计使用比例，用于帮助均匀安排额度，不是各服务商提供的官方限制。
+The green marker on a progress bar represents the suggested cumulative usage percentage for the current billing window. It is a pacing aid, not an official restriction from any provider.
 
-- 小于 24 小时的窗口按小时推进。
-- 24 小时及以上的窗口按天推进。
-- 例如一个完整的 7 天窗口，在第 1 天显示约 `14%`，第 2 天显示约 `29%`。
+- Windows shorter than 24 hours progress by hour.
+- Windows of 24 hours or longer progress by day.
+- For example, a full seven-day window shows approximately `14%` on day one and `29%` on day two.
 
-## 安装
+## Installation
 
-### 使用 DMG（推荐）
+### Use the DMG (Recommended)
 
-1. 前往 [Releases](https://github.com/van-fe/code-usage/releases) 下载最新的 `CodeUsage-*-macos-universal.dmg`。
-2. 打开 DMG，将 `CodeUsage.app` 拖入“应用程序”文件夹。
-3. 启动 CodeUsage，状态栏会出现仪表盘图标和已启用工具的剩余用量。
+1. Go to [Releases](https://github.com/van-fe/code-usage/releases) and download the latest `CodeUsage-*-macos-universal.dmg`.
+2. Open the DMG and drag `CodeUsage.app` into the Applications folder.
+3. Launch CodeUsage. A dashboard icon and the remaining usage for enabled tools will appear in the menu bar.
 
-Universal 构建同时支持：
+The Universal build supports:
 
-- Apple Silicon：`arm64`
-- Intel：`x86_64`
+- Apple Silicon: `arm64`
+- Intel: `x86_64`
 
-系统要求：macOS 13 Ventura 或更新版本。
+System requirement: macOS 13 Ventura or later.
 
-### 首次启动提示
+### Signing and Security
 
-当前公开构建采用 ad-hoc 签名，尚未使用 Apple Developer ID 公证。如果 macOS 阻止首次启动：
+Official release builds are signed with Apple Developer ID and notarized by Apple, so they can be launched normally. Download installers only from this project's [Releases](https://github.com/van-fe/code-usage/releases) page.
 
-1. 在 Finder 中右键 `CodeUsage.app`。
-2. 选择“打开”。
-3. 在确认窗口中再次选择“打开”。
+## Data Sources and Privacy
 
-也可以前往“系统设置 → 隐私与安全性”，选择“仍要打开”。请只安装来自可信来源的构建。
+CodeUsage reads existing sign-in states locally and sends requests only to each tool's own usage service:
 
-## 数据来源与隐私
+- **Codex**: starts the local `codex app-server` and calls `account/rateLimits/read`; it does not read `~/.codex/auth.json`.
+- **Cursor**: reads the existing sign-in state from Cursor's local state database. Refresh tokens are used only for in-memory session renewal and are never written back to disk.
+- **Claude Code**: reads the OAuth sign-in state saved by Claude Code. Refresh tokens are used only for in-memory session renewal and are never written back to disk.
+- **Kiro**: reads local sign-in records from Kiro IDE or CLI and uses only short-lived access tokens; it does not use refresh tokens or read device registration keys or browser cookies.
+- **Qoder**: first calls the local usage control interface of the signed-in Qoder CLI. If the CLI is unavailable, it uses the owner- and permission-validated `.info.json` and Unix socket to call the Qoder IDE JSON-RPC service. Qoder handles authentication; CodeUsage does not read, decrypt, or save Qoder tokens.
 
-CodeUsage 只在本机读取现有登录状态，并向各工具自己的用量接口发起请求：
+The app contains no telemetry and does not upload usage data to a CodeUsage server. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
 
-- **Codex**：启动本机 `codex app-server`，调用 `account/rateLimits/read`；不读取 `~/.codex/auth.json`。
-- **Cursor**：只读 Cursor 本机状态数据库取得现有登录态。刷新令牌只用于内存中的会话续期，不写回磁盘。
-- **Claude Code**：读取 Claude Code 已保存的 OAuth 登录态。刷新令牌只用于内存中的会话续期，不写回磁盘。
-- **Kiro**：只读 Kiro IDE 或 CLI 的本机登录记录，只使用短期 access token；不使用 refresh token，不读取设备注册密钥或浏览器 Cookie。
-- **Qoder**：优先调用已登录的 Qoder CLI 的本机用量控制接口；CLI 不可用时，才通过所有者和权限校验后的 `.info.json` 与 Unix Socket 调用 Qoder IDE 的 JSON-RPC。认证由 Qoder 处理，CodeUsage 不读取、解密或保存 Qoder token。
+## Build from Source
 
-应用不包含遥测，不会上传用量数据到 CodeUsage 自己的服务器。Cursor 与 Kiro 的部分客户端协议不是公开稳定 API；字段变化时，应用会尽量保留其它可用指标并显示明确错误。
+Requirements:
 
-## 从源码构建
-
-需要：
-
-- macOS 13 或更新版本
-- Swift 6 工具链
+- macOS 13 or later
+- Swift 6 toolchain
 - Xcode Command Line Tools
 
-运行测试并构建当前架构版本：
+Run tests and build for the current architecture:
 
 ```bash
 ./Scripts/test.sh
@@ -136,71 +132,72 @@ CodeUsage 只在本机读取现有登录状态，并向各工具自己的用量�
 open dist/CodeUsage.app
 ```
 
-构建同时支持 Apple Silicon 与 Intel 的 Universal 应用和 ZIP：
+Build a Universal app and ZIP for both Apple Silicon and Intel:
 
 ```bash
 ./Scripts/package_universal.sh
 ```
 
-将 `dist/CodeUsage.app` 打包为带拖拽安装界面的中文 DMG，并直接写入 `dist/`：
+Package `dist/CodeUsage.app` as a Chinese drag-to-install DMG written directly to `dist/`:
 
 ```bash
 ./Scripts/package_dmg.sh
 ```
 
-首次生成 DMG 时，macOS 可能请求允许终端控制 Finder，以写入图标位置和窗口背景。
+When creating a DMG for the first time, macOS may ask for permission to let Terminal control Finder so it can configure icon positions and the window background.
 
-生成源码压缩包：
+Create a source archive:
 
 ```bash
 ./Scripts/package_source.sh
 ```
 
-DMG 默认写入项目内的 `dist/`；Universal ZIP 和源码压缩包默认写入 `outputs/`。如需写入其它目录，可设置 `CODEUSAGE_OUTPUT_DIR`。
+The DMG is written to the project's `dist/` directory by default. Universal ZIP and source archives are written to `outputs/`. Set `CODEUSAGE_OUTPUT_DIR` to use another output directory.
 
-本地打包使用 ad-hoc 签名。正式对外发布前，建议使用 Developer ID Application 签名、Hardened Runtime 和 Apple 公证。
+Regular local packaging scripts such as `package.sh` and `package_universal.sh` use ad-hoc signing by default. Official release builds use the local release process with Developer ID Application, Hardened Runtime, and secure timestamp signing, followed by Apple notarization.
 
-GitHub Actions、Release Please 自动版本维护，以及“Apple 凭证只保留在本机 Keychain”的正式签名发布流程见 [RELEASING.md](RELEASING.md)。
+See [RELEASING.md](RELEASING.md) for GitHub Actions, Release Please version automation, and the official signing workflow that keeps Apple credentials only in the local Keychain.
 
-## 项目结构
+## Project Structure
 
 ```text
 CodeUsage/
-├── Sources/CodeUsage/   # SwiftUI 界面、状态栏控制与各工具用量 Provider
-├── Assets/              # 应用图标、工具图标和 DMG 背景
-├── Scripts/             # 测试、单架构、Universal、DMG 与源码打包脚本
-├── dist/                # 当前架构的 App 与 DMG（不提交到 Git）
-├── outputs/             # 本地生成的发布包（不提交到 Git）
-├── LICENSE              # CodeUsage 专有源码可见许可证
+├── Sources/CodeUsage/   # SwiftUI interface, menu bar controller, and usage providers
+├── Assets/              # App icon, provider icons, and DMG background
+├── Scripts/             # Tests and single-architecture, Universal, DMG, and source packaging
+├── dist/                # Current-architecture App and DMG (not committed)
+├── outputs/             # Local release artifacts (not committed)
+├── LICENSE              # CodeUsage proprietary source-available license
 ├── Package.swift
 ├── README.md
+├── README.zh-CN.md
 └── THIRD_PARTY_NOTICES.md
 ```
 
-## 常见问题
+## FAQ
 
-### 安装了工具但没有显示
+### A tool is installed but not shown
 
-确认对应工具已经登录，然后点击面板右上角刷新。检测到 CLI 未登录或登录过期时，卡片会显示对应登录命令并提供复制按钮；登录完成后刷新即可。Qoder 如果只安装了 IDE，需要保持 Qoder IDE 正在运行。
+Confirm that the corresponding tool is signed in, then click the refresh button in the upper-right corner of the panel. If a CLI is signed out or its session has expired, the card shows the appropriate sign-in command and a copy button. Refresh after signing in. If only Qoder IDE is installed, keep Qoder IDE running.
 
-### 为什么 Cursor 的总用量、Auto 和 API 不能相加？
+### Why can't Cursor total, Auto, and API usage be added together?
 
-三者并不是互斥的同级账单项。总用量用于判断套餐整体消耗，Auto 与指定模型用于展示不同路由方式的使用情况，因此不能直接相加。
+They are not mutually exclusive billing items at the same level. Total usage measures overall plan consumption, while Auto and specified-model usage describe different routing methods, so they cannot be added together.
 
-### 为什么没有显示团队总预算？
+### Why isn't the team-wide budget shown?
 
-CodeUsage 只展示当前登录态能够可靠读取的数据。若服务端没有返回团队预算或组织消费权限，应用不会通过个人数据猜测团队额度。
+CodeUsage displays only data that can be read reliably with the current sign-in state. If the server does not provide a team budget or organization spending permission, the app does not guess it from personal data.
 
-### 建议使用量会限制我的使用吗？
+### Does suggested usage restrict how much I can use?
 
-不会。它只是本地显示的节奏参考，不会修改服务端额度、停止请求或产生额外消费。
+No. It is only a local pacing reference. It does not modify server-side quotas, stop requests, or cause additional spending.
 
-## 第三方说明
+## Third-Party Notices
 
-工具名称和单色标识仅用于识别对应服务。完整来源、许可和商标说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Tool names and monochrome marks are used only to identify the corresponding services. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for complete source, license, and trademark notices.
 
-## 许可证
+## License
 
-CodeUsage 采用[专有源码可见许可证](LICENSE)，不是开源软件。
+CodeUsage is distributed under a [proprietary source-available license](LICENSE), not an open-source license.
 
-允许用户免费下载、安装和使用由作者发布的官方未修改版本。未经作者书面授权，不得修改、二次开发、重新打包、再分发、销售或商业化，也不得将官方或修改后的版本上架任何应用商店、软件市场、包仓库或下载平台。第三方材料仍分别适用 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 中列明的许可条款。
+Users may download, install, and use official unmodified builds published by the author free of charge. Without the author's written permission, you may not modify, create derivative works, repackage, redistribute, sell, commercialize, or publish official or modified builds to any app store, software marketplace, package repository, or download platform. Third-party materials remain subject to the separate terms listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
