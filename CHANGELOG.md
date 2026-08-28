@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/van-fe/code-usage/compare/v0.10.1...v0.11.0) (2026-08-28)
+
+
+### Features
+
+* add multilingual interface ([fd33e72](https://github.com/van-fe/code-usage/commit/fd33e72d891354114bf1ef70a71fbe76c0a90728))
+* add optional iCloud usage sync ([0ebf76b](https://github.com/van-fe/code-usage/commit/0ebf76bfa3a1318416cf4b70054fec51d94e5a79))
+
 ## [0.10.1](https://github.com/van-fe/code-usage/compare/v0.10.0...v0.10.1) (2026-08-27)
 
 
