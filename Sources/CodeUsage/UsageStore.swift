@@ -301,20 +301,30 @@ final class UsageStore: ObservableObject {
             let snapshot = state(for: provider).snapshot
             guard let metric = snapshot?.primaryMetric else {
                 return isRefreshing
-                    ? "\(provider.title) 正在更新…"
-                    : "\(provider.title) 暂无数据"
+                    ? L10n.format("menu.updating", provider.title)
+                    : L10n.format("menu.no_data", provider.title)
             }
             if provider == .cursor, metric.id == "on_demand_personal" {
-                let owner = snapshot?.subscriptionCategory.hasSharedOrganizationContext == true
-                    ? "我的"
-                    : ""
-                let basis = metric.allowsLimitEditing ? "显示预算" : "额度"
-                return "Cursor \(owner)按量付费\(basis)剩余 \(Int(metric.remainingPercent.rounded()))%"
+                let key = snapshot?.subscriptionCategory.hasSharedOrganizationContext == true
+                    ? (metric.allowsLimitEditing
+                        ? "menu.cursor.personal_budget_remaining"
+                        : "menu.cursor.personal_limit_remaining")
+                    : (metric.allowsLimitEditing
+                        ? "menu.cursor.budget_remaining"
+                        : "menu.cursor.limit_remaining")
+                return L10n.format(key, Int(metric.remainingPercent.rounded()))
             }
             if provider == .cursor {
-                return "Cursor 套餐额度剩余 \(Int(metric.remainingPercent.rounded()))%"
+                return L10n.format(
+                    "menu.cursor.included_remaining",
+                    Int(metric.remainingPercent.rounded())
+                )
             }
-            return "\(provider.title) 剩余 \(Int(metric.remainingPercent.rounded()))%"
+            return L10n.format(
+                "menu.provider_remaining",
+                provider.title,
+                Int(metric.remainingPercent.rounded())
+            )
         }.joined(separator: " · ")
     }
 

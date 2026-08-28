@@ -11,11 +11,11 @@ enum SubscriptionCategory: String, CaseIterable, Identifiable, Equatable, Sendab
 
     var title: String {
         switch self {
-        case .freeTrial: return "免费试用"
-        case .individual: return "个人用户"
-        case .team: return "团队用户"
-        case .enterprise: return "企业用户"
-        case .unknown: return "未知订阅"
+        case .freeTrial: return L10n.text("免费试用")
+        case .individual: return L10n.text("个人用户")
+        case .team: return L10n.text("团队用户")
+        case .enterprise: return L10n.text("企业用户")
+        case .unknown: return L10n.text("未知订阅")
         }
     }
 
@@ -424,11 +424,11 @@ struct UsageMetric: Identifiable, Equatable, Sendable {
 
         var title: String {
             switch self {
-            case .included: return "套餐内用量"
-            case .onDemand: return "按量付费"
-            case .credits: return "额外 Credits"
-            case .personalAddOn: return "个人加购额度"
-            case .organizationShared: return "组织共享额度"
+            case .included: return L10n.text("套餐内用量")
+            case .onDemand: return L10n.text("按量付费")
+            case .credits: return L10n.text("额外 Credits")
+            case .personalAddOn: return L10n.text("个人加购额度")
+            case .organizationShared: return L10n.text("组织共享额度")
             }
         }
     }
@@ -474,12 +474,16 @@ struct UsageMetric: Identifiable, Equatable, Sendable {
     func deadlineDescription(at date: Date = Date()) -> String? {
         guard let deadlineAt else { return nil }
         let interval = deadlineAt.timeIntervalSince(date)
-        let action = deadlineKind == .expiration ? "到期" : "重置"
-        if interval <= 0 { return "即将\(action)" }
+        let prefix = deadlineKind == .expiration
+            ? "deadline.expiration"
+            : "deadline.reset"
+        if interval <= 0 { return L10n.text("\(prefix).imminent") }
         let hours = Int(interval / 3_600)
-        if hours < 24 { return "\(max(hours, 1)) 小时后\(action)" }
+        if hours < 24 {
+            return L10n.format("\(prefix).hours", max(hours, 1))
+        }
         let days = Int(ceil(interval / 86_400))
-        return "\(days) 天后\(action)"
+        return L10n.format("\(prefix).days", days)
     }
 
     func suggestedUsedPercent(at date: Date = Date()) -> Double? {

@@ -66,12 +66,21 @@ cp "$PROJECT_DIR/Assets/provider-qoder.svg" "$CONTENTS_DIR/Resources/provider-qo
 cp "$PROJECT_DIR/Assets/github-mark.svg" "$CONTENTS_DIR/Resources/github-mark.svg"
 cp "$PROJECT_DIR/Assets/statusbar-logo.svg" "$CONTENTS_DIR/Resources/statusbar-logo.svg"
 cp "$PROJECT_DIR/Assets/AppIcon.icns" "$CONTENTS_DIR/Resources/AppIcon.icns"
+for LOCALIZATION_DIR in "$PROJECT_DIR/Sources/CodeUsage/Resources"/*.lproj; do
+  /usr/bin/ditto "$LOCALIZATION_DIR" \
+    "$CONTENTS_DIR/Resources/${LOCALIZATION_DIR:t}"
+done
 
 plutil -create xml1 "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleExecutable -string CodeUsage "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleIdentifier -string "$BUNDLE_IDENTIFIER" "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleName -string CodeUsage "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleDisplayName -string CodeUsage "$CONTENTS_DIR/Info.plist"
+plutil -insert CFBundleDevelopmentRegion -string en "$CONTENTS_DIR/Info.plist"
+plutil -insert CFBundleLocalizations -json \
+  '["zh-Hans","zh-Hant","en","fr","de","ja","ko"]' \
+  "$CONTENTS_DIR/Info.plist"
+plutil -insert CFBundleAllowMixedLocalizations -bool true "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundlePackageType -string APPL "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleIconFile -string AppIcon.icns "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleShortVersionString -string "$APP_VERSION" "$CONTENTS_DIR/Info.plist"

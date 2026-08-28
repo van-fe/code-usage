@@ -12,6 +12,7 @@ extension Notification.Name {
 final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
     private let store = UsageStore()
     private let launchAtLogin = LaunchAtLoginManager()
+    private let localization = LocalizationManager()
     private let launchAtLoginPromptKey = "launchAtLogin.didOffer.v1"
     private let panel: StatusMenuPanel = {
         let panel = StatusMenuPanel(
@@ -32,6 +33,7 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
     }()
     private var statusItem: NSStatusItem?
     private var storeCancellable: AnyCancellable?
+    private var localizationCancellable: AnyCancellable?
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
 
@@ -50,7 +52,8 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
         panel.contentViewController = NSHostingController(
             rootView: StatusPanelRootView(
                 store: store,
-                launchAtLogin: launchAtLogin
+                launchAtLogin: launchAtLogin,
+                localization: localization
             )
         )
         panel.onCancel = { [weak self] in
@@ -64,6 +67,13 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
                 if !self.panel.isVisible {
                     self.updatePanelSize()
                 }
+            }
+        }
+        localizationCancellable = localization.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.updateStatusItem()
+                self.updatePanelSize()
             }
         }
 
@@ -82,6 +92,7 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         storeCancellable?.cancel()
+        localizationCancellable?.cancel()
         stopDismissMonitoring()
     }
 
@@ -117,19 +128,21 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
 
             let alert = NSAlert()
             alert.alertStyle = .informational
-            alert.messageText = "登录时自动启动 CodeUsage？"
-            alert.informativeText = "开启后，CodeUsage 会在你登录 Mac 时自动出现在状态栏。之后可在面板底部随时关闭。"
-            alert.addButton(withTitle: "开启")
-            alert.addButton(withTitle: "暂不")
+            alert.messageText = L10n.text("登录时自动启动 CodeUsage？")
+            alert.informativeText = L10n.text(
+                "开启后，CodeUsage 会在你登录 Mac 时自动出现在状态栏。之后可在面板底部随时关闭。"
+            )
+            alert.addButton(withTitle: L10n.text("开启"))
+            alert.addButton(withTitle: L10n.text("暂不"))
             NSApplication.shared.activate(ignoringOtherApps: true)
 
             guard alert.runModal() == .alertFirstButtonReturn else { return }
             if let message = self.launchAtLogin.setEnabled(true) {
                 let errorAlert = NSAlert()
                 errorAlert.alertStyle = .warning
-                errorAlert.messageText = "无法开启开机启动"
-                errorAlert.informativeText = message
-                errorAlert.addButton(withTitle: "好")
+                errorAlert.messageText = L10n.text("无法开启开机启动")
+                errorAlert.informativeText = L10n.userFacing(message)
+                errorAlert.addButton(withTitle: L10n.text("好"))
                 errorAlert.runModal()
             }
         }
@@ -270,8 +283,8 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusToolTip: String {
         let providers = store.visibleMenuBarProviders
-        guard !providers.isEmpty else { return "打开 CodeUsage" }
-        return "查看用量：\(store.menuBarText(for: providers))"
+        guard !providers.isEmpty else { return L10n.text("打开 CodeUsage") }
+        return L10n.format("menu.tooltip", store.menuBarText(for: providers))
     }
 
     private func makeStatusImage() -> NSImage {
@@ -420,9 +433,15 @@ private final class StatusMenuPanel: NSPanel {
 private struct StatusPanelRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var launchAtLogin: LaunchAtLoginManager
+    @ObservedObject var localization: LocalizationManager
 
     var body: some View {
-        DashboardView(store: store, launchAtLogin: launchAtLogin)
+        DashboardView(
+            store: store,
+            launchAtLogin: launchAtLogin,
+            localization: localization
+        )
+            .environment(\.locale, localization.language.locale)
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {

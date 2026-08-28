@@ -62,7 +62,9 @@ final class LaunchAtLoginManager: ObservableObject {
             }
         } catch {
             refreshStatus()
-            let message = "\(enabled ? "开启" : "关闭")开机启动失败。请稍后重试；如果仍失败，请到“系统设置 → 通用 → 登录项”检查 CodeUsage。"
+            let message = L10n.text(enabled
+                ? "launch_at_login.enable_failed"
+                : "launch_at_login.disable_failed")
             errorMessage = message
             return message
         }

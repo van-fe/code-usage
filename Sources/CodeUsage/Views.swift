@@ -6,6 +6,7 @@ private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
 struct DashboardView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var launchAtLogin: LaunchAtLoginManager
+    @ObservedObject var localization: LocalizationManager
     @State private var showsArchivedProviders = false
 
     var body: some View {
@@ -107,10 +108,13 @@ struct DashboardView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(showsArchivedProviders ? "收起已归档列表" : "展开已归档列表")
-            .accessibilityLabel("已归档，\(store.archivedProvidersList.count) 个工具")
-            .accessibilityValue(showsArchivedProviders ? "已展开" : "已收起")
-            .accessibilityHint(showsArchivedProviders ? "点击收起列表" : "点击展开列表")
+            .help(L10n.text(showsArchivedProviders ? "收起已归档列表" : "展开已归档列表"))
+            .accessibilityLabel(L10n.format(
+                "archive.accessibility_count",
+                store.archivedProvidersList.count
+            ))
+            .accessibilityValue(L10n.text(showsArchivedProviders ? "已展开" : "已收起"))
+            .accessibilityHint(L10n.text(showsArchivedProviders ? "点击收起列表" : "点击展开列表"))
 
             if showsArchivedProviders {
                 Divider()
@@ -135,7 +139,10 @@ struct DashboardView: View {
                             }
                             .buttonStyle(CompactActionButtonStyle())
                             .font(.caption2)
-                            .accessibilityLabel("取消归档 \(provider.title)")
+                            .accessibilityLabel(L10n.format(
+                                "archive.unarchive_provider",
+                                provider.title
+                            ))
                         }
                         .padding(.vertical, 7)
 
@@ -185,9 +192,9 @@ struct DashboardView: View {
                 Text("CodeUsage")
                     .font(.headline)
 
-                Text(store.isSimulationMode
+                Text(L10n.text(store.isSimulationMode
                     ? "订阅模拟 · 示例数据仅用于界面检查"
-                    : "Codex、Cursor、Claude 等 AI 编程工具用量一览")
+                    : "Codex、Cursor、Claude 等 AI 编程工具用量一览"))
                     .font(.system(size: 9, weight: .regular))
                     .foregroundStyle(Color.secondary.opacity(0.82))
                     .lineLimit(1)
@@ -206,12 +213,12 @@ struct DashboardView: View {
                         .frame(width: 14, height: 14)
                 }
                 .buttonStyle(CompactIconButtonStyle())
-                .help(store.isSimulationMode
+                .help(L10n.text(store.isSimulationMode
                     ? "重置当前模拟数据"
-                    : "刷新所有工具的用量")
-                .accessibilityLabel(store.isSimulationMode
+                    : "刷新所有工具的用量"))
+                .accessibilityLabel(L10n.text(store.isSimulationMode
                     ? "重置当前模拟数据"
-                    : "刷新所有工具的用量")
+                    : "刷新所有工具的用量"))
                 .opacity(store.isRefreshing ? 0 : 1)
                 .disabled(store.isRefreshing)
 
@@ -272,7 +279,10 @@ struct DashboardView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else if let updated = store.lastUpdated {
-                Text("更新于 \(updated.formatted(date: .omitted, time: .shortened))")
+                Text(L10n.format(
+                    "updated_at",
+                    L10n.shortTime(updated)
+                ))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
@@ -281,63 +291,89 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button {
-                openGitHubRepository()
-            } label: {
-                GitHubMarkIcon(size: 12)
-            }
-            .buttonStyle(CompactIconButtonStyle())
-            .accessibilityLabel("打开 CodeUsage 的 GitHub 页面")
-            .accessibilityHint("使用默认浏览器打开")
-
-            if !store.isSimulationMode {
-                Toggle(
-                    "iCloud",
-                    isOn: Binding(
-                        get: { store.isCloudSyncEnabled },
-                        set: { store.setCloudSyncEnabled($0) }
+            Menu {
+                Picker(
+                    selection: Binding(
+                        get: { localization.language },
+                        set: { localization.setLanguage($0) }
                     )
-                )
-                .toggleStyle(.checkbox)
-                .controlSize(.small)
-                .font(.caption)
-                .help(cloudSyncHelp)
+                ) {
+                    Text(LocalizedStringKey(AppLanguage.system.nativeTitle))
+                        .tag(AppLanguage.system)
 
-                Toggle(
-                    "开机启动",
-                    isOn: Binding(
-                        get: { launchAtLogin.isEnabled },
-                        set: { launchAtLogin.setEnabled($0) }
-                    )
-                )
-                .toggleStyle(.checkbox)
-                .controlSize(.small)
-                .font(.caption)
-                .help(launchAtLoginHelp)
+                    Divider()
 
-                if launchAtLogin.requiresApproval {
-                    Button {
-                        launchAtLogin.openApprovalSettings()
-                    } label: {
-                        Image(systemName: "exclamationmark.circle")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.orange)
+                    ForEach(AppLanguage.allCases.dropFirst()) { language in
+                        Text(verbatim: language.nativeTitle).tag(language)
                     }
-                    .buttonStyle(CompactIconButtonStyle())
-                    .arrowHoverHelp(
-                        "点击打开“系统设置 → 通用 → 登录项”，然后允许 CodeUsage 开机启动。",
-                        width: 270
-                    )
-                    .accessibilityLabel("打开登录项设置")
-                    .accessibilityHint("允许 CodeUsage 在登录 Mac 时自动启动")
-                } else if let error = launchAtLogin.errorMessage {
-                    Image(systemName: "exclamationmark.circle")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.red)
-                        .arrowHoverHelp(error, width: 280)
-                        .accessibilityLabel(error)
+                } label: {
+                    Label {
+                        Text("语言")
+                    } icon: {
+                        Image(systemName: "globe")
+                            .font(.system(size: 12, weight: .regular))
+                            .frame(width: 14, height: 14)
+                    }
                 }
+                .id(localization.language)
+
+                if !store.isSimulationMode {
+                    Toggle(
+                        "iCloud 同步",
+                        isOn: Binding(
+                            get: { store.isCloudSyncEnabled },
+                            set: { store.setCloudSyncEnabled($0) }
+                        )
+                    )
+
+                    Toggle(
+                        "登录时启动",
+                        isOn: Binding(
+                            get: { launchAtLogin.isEnabled },
+                            set: { launchAtLogin.setEnabled($0) }
+                        )
+                    )
+
+                    if launchAtLogin.requiresApproval {
+                        Button {
+                            launchAtLogin.openApprovalSettings()
+                        } label: {
+                            Label("打开登录项设置", systemImage: "exclamationmark.circle")
+                        }
+                    } else if let error = launchAtLogin.errorMessage {
+                        Button {} label: {
+                            Label(
+                                L10n.userFacing(error),
+                                systemImage: "exclamationmark.circle"
+                            )
+                        }
+                        .disabled(true)
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    openGitHubRepository()
+                } label: {
+                    Label {
+                        Text("打开 GitHub 主页")
+                    } icon: {
+                        GitHubMarkIcon(size: 12)
+                            .frame(width: 14, height: 14)
+                    }
+                }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(width: 12, height: 12)
             }
+            .menuStyle(.button)
+            .buttonStyle(CompactIconButtonStyle())
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(settingsMenuHelp)
+            .accessibilityLabel("设置与链接")
 
             Button {
                 NSApplication.shared.terminate(nil)
@@ -352,28 +388,43 @@ struct DashboardView: View {
         .padding(.vertical, 10)
     }
 
+    private var settingsMenuHelp: String {
+        var details = [L10n.text("设置与链接")]
+        if !store.isSimulationMode {
+            details.append(cloudSyncHelp)
+            details.append(launchAtLoginHelp)
+            if let error = launchAtLogin.errorMessage {
+                details.append(L10n.userFacing(error))
+            }
+        }
+        return details.joined(separator: "\n")
+    }
+
     private var launchAtLoginHelp: String {
         if launchAtLogin.requiresApproval {
-            return "开机启动还没生效。请到“系统设置 → 通用 → 登录项”允许 CodeUsage。"
+            return L10n.text("开机启动还没生效。请到“系统设置 → 通用 → 登录项”允许 CodeUsage。")
         }
         if launchAtLogin.isEnabled {
-            return "关闭后，CodeUsage 将不再随 Mac 登录自动启动。"
+            return L10n.text("关闭后，CodeUsage 将不再随 Mac 登录自动启动。")
         }
-        return "开启后，登录 Mac 时会自动启动 CodeUsage。"
+        return L10n.text("开启后，登录 Mac 时会自动启动 CodeUsage。")
     }
 
     private var cloudSyncHelp: String {
         switch store.cloudSyncStatus {
         case .disabled:
-            return "开启后，只把用量展示快照同步到你的 iCloud 私有数据库。"
+            return L10n.text("开启后，只把用量展示快照同步到你的 iCloud 私有数据库。")
         case .idle:
-            return "已开启；下次刷新后会同步用量快照。"
+            return L10n.text("已开启；下次刷新后会同步用量快照。")
         case .syncing:
-            return "正在同步用量快照到 iCloud…"
+            return L10n.text("正在同步用量快照到 iCloud…")
         case .synced(let date):
-            return "最近同步于 \(date.formatted(date: .omitted, time: .shortened))。"
+            return L10n.format(
+                "cloud.last_synced",
+                L10n.shortTime(date)
+            )
         case .unavailable(let message):
-            return message
+            return L10n.userFacing(message)
         }
     }
 
@@ -452,7 +503,10 @@ private struct PlanBadge: View {
     var body: some View {
         Group {
             if needsTooltip {
-                truncatedBadge.arrowHoverHelp("套餐：\(text)", width: tooltipWidth)
+                truncatedBadge.arrowHoverHelp(
+                    L10n.format("plan.name", text),
+                    width: tooltipWidth
+                )
             } else {
                 fullBadge
             }
@@ -468,7 +522,7 @@ private struct PlanBadge: View {
             .padding(.vertical, 2)
             .background(.secondary.opacity(0.12), in: Capsule())
             .contentShape(Capsule())
-            .accessibilityLabel("套餐：\(text)")
+            .accessibilityLabel(L10n.format("plan.name", text))
     }
 
     private var truncatedBadge: some View {
@@ -481,7 +535,7 @@ private struct PlanBadge: View {
             .padding(.vertical, 2)
             .background(.secondary.opacity(0.12), in: Capsule())
             .contentShape(Capsule())
-            .accessibilityLabel("套餐：\(text)")
+            .accessibilityLabel(L10n.format("plan.name", text))
     }
 
     private var textWidth: CGFloat {
@@ -532,21 +586,21 @@ private struct ProviderCard: View {
                             Button {
                                 ProviderAppLauncher.openApplication(provider)
                             } label: {
-                                Label(applicationTitle, systemImage: applicationIcon)
+                            Label(L10n.userFacing(applicationTitle), systemImage: applicationIcon)
                             }
                         }
                         if ProviderInstallation.cliExecutable(for: provider) != nil {
                             Button {
                                 ProviderAppLauncher.openCLI(provider)
                             } label: {
-                                Label(cliActionTitle, systemImage: "terminal")
+                            Label(cliActionTitle, systemImage: "terminal")
                             }
                         }
                         Divider()
                     }
                     Button(action: toggleMenuBarVisibility) {
                         Label(
-                            isShownInMenuBar ? "从状态栏隐藏" : "在状态栏显示",
+                            L10n.text(isShownInMenuBar ? "从状态栏隐藏" : "在状态栏显示"),
                             systemImage: isShownInMenuBar ? "eye.slash" : "eye"
                         )
                     }
@@ -565,7 +619,7 @@ private struct ProviderCard: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .help("更多操作")
-                .accessibilityLabel("\(provider.title) 更多操作")
+                .accessibilityLabel(L10n.format("provider.more_actions", provider.title))
                 if state.isStale {
                     Text("旧数据")
                         .font(.caption2)
@@ -576,7 +630,7 @@ private struct ProviderCard: View {
             if let snapshot = state.snapshot {
                 metricsContent(snapshot.metrics)
                 if let note = snapshot.note {
-                    Text(note)
+                    Text(L10n.userFacing(note))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -602,7 +656,7 @@ private struct ProviderCard: View {
     private func errorContent(_ error: String, isStale: Bool) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Label(
-                error,
+                L10n.userFacing(error),
                 systemImage: isStale
                     ? "exclamationmark.triangle.fill"
                     : "exclamationmark.circle"
@@ -635,7 +689,10 @@ private struct ProviderCard: View {
                         }
                         .buttonStyle(CompactActionButtonStyle())
                         .font(.caption2)
-                        .accessibilityLabel("复制 \(provider.title) 登录命令")
+                        .accessibilityLabel(L10n.format(
+                            "provider.copy_login_command",
+                            provider.title
+                        ))
                     }
                     .padding(.vertical, 5)
                     .padding(.horizontal, 7)
@@ -677,11 +734,11 @@ private struct ProviderCard: View {
 
     private var cliActionTitle: String {
         switch provider {
-        case .codex: return "在终端启动 Codex"
-        case .cursor: return "在终端启动 Cursor CLI"
-        case .claude: return "在终端启动 Claude Code"
-        case .kiro: return "在终端启动 Kiro CLI"
-        case .qoder: return "在终端启动 Qoder CLI"
+        case .codex: return L10n.text("在终端启动 Codex")
+        case .cursor: return L10n.text("在终端启动 Cursor CLI")
+        case .claude: return L10n.text("在终端启动 Claude Code")
+        case .kiro: return L10n.text("在终端启动 Kiro CLI")
+        case .qoder: return L10n.text("在终端启动 Qoder CLI")
         }
     }
 
@@ -763,8 +820,11 @@ private struct ProviderCard: View {
                         .font(.system(size: 8, weight: .semibold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     Text(isExpanded
-                        ? "收起明细"
-                        : "另外 \(section.metrics.count - 1) 项明细")
+                        ? L10n.text("收起明细")
+                        : L10n.format(
+                            "metrics.additional_details",
+                            section.metrics.count - 1
+                        ))
                     Spacer(minLength: 0)
                 }
                 .font(.system(size: 10, weight: .medium))
@@ -772,13 +832,17 @@ private struct ProviderCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(isExpanded ? "收起用量明细" : "展开全部用量明细")
+            .help(L10n.text(isExpanded ? "收起用量明细" : "展开全部用量明细"))
             .accessibilityLabel(
                 isExpanded
-                    ? "收起 \(provider.title) 用量明细"
-                    : "展开 \(provider.title) 的另外 \(section.metrics.count - 1) 项用量明细"
+                    ? L10n.format("metrics.collapse_provider", provider.title)
+                    : L10n.format(
+                        "metrics.expand_provider",
+                        provider.title,
+                        section.metrics.count - 1
+                    )
             )
-            .accessibilityValue(isExpanded ? "已展开" : "已收起")
+            .accessibilityValue(L10n.text(isExpanded ? "已展开" : "已收起"))
 
             if isExpanded {
                 ForEach(Array(section.metrics.dropFirst())) { metric in
@@ -832,7 +896,7 @@ private struct ProviderCard: View {
                 Divider()
             }
             HStack(spacing: 6) {
-                Text(metricGroupTitle(group))
+                Text(L10n.text(metricGroupTitle(group)))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 4)
@@ -843,7 +907,7 @@ private struct ProviderCard: View {
                         if let suggested = timeline.suggestedPercent {
                             Text("·")
                                 .foregroundStyle(.secondary)
-                            Text("建议 \(suggested)%")
+                            Text(L10n.format("usage.suggested_percent", suggested))
                                 .foregroundStyle(suggestedUsageColor)
                         }
                     }
@@ -907,11 +971,15 @@ private struct ProviderCard: View {
         return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(metric.title)
+                    Text(L10n.userFacing(metric.title))
                     if let help = cursorMetricHelp(metric) {
                         MetricHelpIcon(
                             text: help,
-                            accessibilityLabel: "关于“\(metric.title)”：\(help)"
+                            accessibilityLabel: L10n.format(
+                                "metric.help_accessibility",
+                                L10n.userFacing(metric.title),
+                                help
+                            )
                         )
                     }
                     if metric.allowsLimitEditing && !isEditingCursorLimit {
@@ -935,7 +1003,10 @@ private struct ProviderCard: View {
                 if metric.id == "on_demand_personal", isEditingCursorLimit {
                     cursorLimitEditor
                 } else if metric.showsProgress {
-                    Text("已用 \(Int(metric.clampedPercent.rounded()))%")
+                    Text(L10n.format(
+                        "usage.used_percent",
+                        Int(metric.clampedPercent.rounded())
+                    ))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
                         .monospacedDigit()
@@ -963,7 +1034,10 @@ private struct ProviderCard: View {
                             Circle()
                                 .fill(suggestedUsageColor)
                                 .frame(width: 4, height: 4)
-                            Text("建议 \(Int(suggested.rounded()))%")
+                            Text(L10n.format(
+                                "usage.suggested_percent",
+                                Int(suggested.rounded())
+                            ))
                         }
                         .font(.system(size: 9, weight: .medium))
                         .foregroundStyle(suggestedUsageColor)
@@ -984,9 +1058,15 @@ private struct ProviderCard: View {
     }
 
     private func progressAccessibilityLabel(_ metric: UsageMetric, suggested: Double?) -> String {
-        var value = "已使用 \(Int(metric.clampedPercent.rounded()))%"
+        var value = L10n.format(
+            "usage.accessibility_used_percent",
+            Int(metric.clampedPercent.rounded())
+        )
         if let suggested {
-            value += "；按当前时间，建议最多用到 \(Int(suggested.rounded()))%"
+            value += L10n.format(
+                "usage.accessibility_suggested_percent",
+                Int(suggested.rounded())
+            )
         }
         return value
     }
@@ -995,24 +1075,26 @@ private struct ProviderCard: View {
         guard provider == .cursor else { return nil }
         switch metric.id {
         case "total":
-            return "这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。"
+            return L10n.text("这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。")
         case "auto":
-            return "这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。"
+            return L10n.text("这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。")
         case "api":
-            return "这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。"
+            return L10n.text("这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。")
         case "on_demand_personal":
             if cursorSubscriptionCategory.hasSharedOrganizationContext {
-                let sharedName = cursorSubscriptionCategory == .enterprise
-                    ? "组织总消费"
-                    : "团队总消费"
-                return "这是你本期个人产生的按量付费金额，与“\(sharedName)”分开显示。显示预算只用于计算进度，不会限制实际消费。"
+                let sharedName = L10n.text(
+                    cursorSubscriptionCategory == .enterprise
+                        ? "组织总消费"
+                        : "团队总消费"
+                )
+                return L10n.format("cursor.help.personal_shared", sharedName)
             }
-            return "这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。"
+            return L10n.text("这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。")
         case "on_demand_team":
             if cursorSubscriptionCategory == .enterprise {
-                return "这是整个组织本期的按量付费总额和上限，不是你的个人额度。"
+                return L10n.text("这是整个组织本期的按量付费总额和上限，不是你的个人额度。")
             }
-            return "这是整个团队本期的按量付费总额和上限，不是你的个人额度。"
+            return L10n.text("这是整个团队本期的按量付费总额和上限，不是你的个人额度。")
         default:
             return nil
         }
@@ -1020,16 +1102,16 @@ private struct ProviderCard: View {
 
     private var cursorLimitEditHelp: String {
         if let limit = cursorIndividualLimitDollars {
-            return "当前按 $\(formattedLimit(limit)) 的显示预算计算进度。点击修改。这个金额不会更改 Cursor 的消费上限。"
+            return L10n.format("cursor.budget.edit_help", formattedLimit(limit))
         }
-        return "点击设置显示预算。CodeUsage 会据此显示消费进度；这个金额不会更改 Cursor 的消费上限。"
+        return L10n.text("点击设置显示预算。CodeUsage 会据此显示消费进度；这个金额不会更改 Cursor 的消费上限。")
     }
 
     private var cursorLimitAccessibilityLabel: String {
         if let limit = cursorIndividualLimitDollars {
-            return "修改显示预算，当前为 $\(formattedLimit(limit))"
+            return L10n.format("cursor.budget.accessibility", formattedLimit(limit))
         }
-        return "设置显示预算"
+        return L10n.text("设置显示预算")
     }
 
     private var cursorSubscriptionCategory: SubscriptionCategory {
@@ -1118,27 +1200,35 @@ private struct ProviderCard: View {
             if let limitCents {
                 let limit = currency(limitCents, minimumFractionDigits: 0)
                 if provider == .cursor, metric.id == "on_demand_personal" {
-                    let label = metric.allowsLimitEditing ? "预算" : "消费上限"
-                    return "\(used) / \(label) \(limit)"
+                    let label = L10n.text(metric.allowsLimitEditing ? "预算" : "消费上限")
+                    return L10n.format("usage.value_labeled_limit", used, label, limit)
                 }
                 if provider == .cursor, metric.id == "on_demand_team" {
-                    let label = cursorSubscriptionCategory == .enterprise
+                    let label = L10n.text(cursorSubscriptionCategory == .enterprise
                         ? "组织上限"
-                        : "团队上限"
-                    return "\(used) / \(label) \(limit)"
+                        : "团队上限")
+                    return L10n.format("usage.value_labeled_limit", used, label, limit)
                 }
-                return "已用 \(used) / \(limit)"
+                return L10n.format("usage.value_used_limit", used, limit)
             }
-            return provider == .cursor ? "已消费 \(used)" : "已用 \(used)"
+            return L10n.format(
+                provider == .cursor ? "usage.value_spent" : "usage.value_used",
+                used
+            )
         case .quantity(let used, let limit, let remaining, let unit):
             if let used, let limit {
-                return "已用 \(decimal(used)) / \(decimal(limit)) \(unit)"
+                return L10n.format(
+                    "usage.quantity_used_limit",
+                    decimal(used),
+                    decimal(limit),
+                    unit
+                )
             }
             if let remaining {
-                return "剩余 \(decimal(remaining)) \(unit)"
+                return L10n.format("usage.quantity_remaining", decimal(remaining), unit)
             }
             if let used {
-                return "已用 \(decimal(used)) \(unit)"
+                return L10n.format("usage.quantity_used", decimal(used), unit)
             }
             return nil
         }
@@ -1146,7 +1236,7 @@ private struct ProviderCard: View {
 
     private func currency(_ cents: Int64, minimumFractionDigits: Int) -> String {
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = L10n.locale
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = true
         formatter.minimumFractionDigits = minimumFractionDigits
@@ -1158,7 +1248,7 @@ private struct ProviderCard: View {
 
     private func decimal(_ value: Double) -> String {
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = L10n.locale
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = true
         formatter.minimumFractionDigits = 0

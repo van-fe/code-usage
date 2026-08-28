@@ -10,6 +10,9 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "CodeUsage",
+            resources: [
+                .copy("Resources")
+            ],
             linkerSettings: [
                 .linkedFramework("CloudKit"),
                 .linkedFramework("Security")
