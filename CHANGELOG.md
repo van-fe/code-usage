@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/van-fe/code-usage/compare/v0.11.1...v0.11.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* update app and status bar logos ([77975fc](https://github.com/van-fe/code-usage/commit/77975fcecfc26d0d04db3b5b074b0216043d42cf))
+
 ## [0.11.1](https://github.com/van-fe/code-usage/compare/v0.11.0...v0.11.1) (2026-08-28)
 
 
