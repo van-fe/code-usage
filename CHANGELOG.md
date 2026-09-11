@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/van-fe/code-usage/compare/v0.11.2...v0.12.0) (2026-09-11)
+
+
+### Features
+
+* add configurable desktop usage widgets ([95220aa](https://github.com/van-fe/code-usage/commit/95220aab40dd52fd59aedd717d5927b3d00163b5))
+
 ## [0.11.2](https://github.com/van-fe/code-usage/compare/v0.11.1...v0.11.2) (2026-09-02)
 
 
