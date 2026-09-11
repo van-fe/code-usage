@@ -19,6 +19,7 @@
 "menu.cursor.personal_budget_remaining" = "Mein Cursor-Anzeigebudget: %d%% verbleibend";
 "menu.cursor.personal_limit_remaining" = "Mein Cursor-Nutzungslimit: %d%% verbleibend";
 "menu.no_data" = "%@: keine Daten";
+"menu.provider_used" = "%@ · %@: %d%% verwendet";
 "menu.provider_remaining" = "%@: %d%% verbleibend";
 "menu.tooltip" = "Nutzung anzeigen: %@";
 "menu.updating" = "%@: wird aktualisiert…";
@@ -53,6 +54,39 @@
 "launch_at_login.enable_failed" = "Start bei Anmeldung konnte nicht aktiviert werden. Versuchen Sie es später erneut oder prüfen Sie CodeUsage unter Systemeinstellungen → Allgemein → Anmeldeobjekte.";
 "launch_at_login.disable_failed" = "Start bei Anmeldung konnte nicht deaktiviert werden. Versuchen Sie es später erneut oder prüfen Sie CodeUsage unter Systemeinstellungen → Allgemein → Anmeldeobjekte.";
 
+"简略" = "Kurz";
+"中度" = "Mittel";
+"完整" = "Vollständig";
+"展示模式" = "Anzeigemodus";
+"状态栏展示" = "Menüleistenanzeige";
+"桌面展示" = "Schreibtischanzeige";
+"桌面展示模式" = "Schreibtisch-Anzeigemodus";
+"关闭桌面展示" = "Schreibtischanzeige ausschalten";
+"桌面展示设置" = "Einstellungen der Schreibtischanzeige";
+"打开用量面板" = "Nutzungsübersicht öffnen";
+"最低剩余" = "Niedrigster Restwert";
+"暂无可展示的用量" = "Keine Nutzung zum Anzeigen";
+"暂无数据" = "Keine Daten";
+"简略用量" = "Kurze Nutzung";
+"用一个数字查看当前最低剩余额度。" = "Den niedrigsten verbleibenden Wert auf einen Blick sehen.";
+"中度用量" = "Mittlere Nutzung";
+"并排查看多个工具的主额度。" = "Hauptkontingente mehrerer Tools nebeneinander anzeigen.";
+"完整用量" = "Vollständige Nutzung";
+"查看所有工具、套餐与主额度状态。" = "Alle Tools, Tarife und Hauptkontingente anzeigen.";
+"打开 CodeUsage 刷新用量" = "CodeUsage öffnen, um die Nutzung zu aktualisieren";
+"CodeUsage 用量" = "CodeUsage-Nutzung";
+"在桌面或通知中心快速查看主要用量。" = "Die Hauptnutzung schnell auf dem Schreibtisch oder in der Mitteilungszentrale anzeigen.";
+"用量指标" = "Nutzungsmetrik";
+"选择用量指标" = "Nutzungsmetriken auswählen";
+"小号可选择 1 个指标，中号最多 3 个；大号始终显示全部指标。" = "Kleine Widgets zeigen 1 Metrik, mittlere bis zu 3; große zeigen immer alle Metriken.";
+"显示指标" = "Metriken";
+"第二个指标" = "Zweite Metrik";
+"第三个指标" = "Dritte Metrik";
+"显示全部指标" = "Alle Metriken anzeigen";
+"小号选 1 个，中号最多选 3 个。" = "Wähle 1 Metrik für kleine und bis zu 3 für mittlere Widgets.";
+"小号和中号可自选指标，大号显示全部用量。" = "Metriken für kleine und mittlere Widgets auswählen; große zeigen die gesamte Nutzung.";
+"从控制中心快速打开最新用量。" = "Die aktuelle Nutzung schnell im Kontrollzentrum öffnen.";
+
 "Codex、Cursor、Claude 等 AI 编程工具用量一览" = "Codex, Cursor, Claude & weitere KI-Tools";
 "订阅模拟 · 示例数据仅用于界面检查" = "Abo-Simulation · Beispieldaten nur zur Oberflächenprüfung";
 "所有已安装工具均已归档" = "Alle installierten Werkzeuge sind archiviert";
@@ -76,6 +110,7 @@
 "订阅类型" = "Abo-Typ";
 "模拟数据 · 不读取真实账号" = "Beispieldaten · Keine echten Konten werden gelesen";
 "每 5 分钟自动刷新" = "Automatische Aktualisierung alle 5 Minuten";
+"小组件同步失败" = "Widget-Synchronisierung fehlgeschlagen";
 "打开 CodeUsage 的 GitHub 页面" = "GitHub-Seite von CodeUsage öffnen";
 "使用默认浏览器打开" = "Im Standardbrowser öffnen";
 "开机启动" = "Bei Anmeldung starten";
@@ -142,6 +177,15 @@
 "5 小时会话" = "5-Stunden-Sitzung";
 "周额度" = "Wochenkontingent";
 "本月我的用量" = "Meine Nutzung in diesem Monat";
+
+"这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。" = "Dies ist die gesamte im Tarif enthaltene Nutzung im aktuellen Abrechnungszeitraum. Die nutzungsabhängige Nutzung wird unten separat angezeigt.";
+"这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。" = "Dies ist die im Tarif enthaltene Nutzung, die mit Auto (automatische Modellauswahl) entstanden ist. Sie ist kein separates Kontingent und darf nicht zur Gesamtnutzung addiert werden.";
+"这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。" = "Dies ist die im Tarif enthaltene Nutzung, die durch die manuelle Auswahl von Modellen wie Claude, GPT oder Gemini entstanden ist. „API“ ist hier die Bezeichnung einer Cursor-Kategorie, nicht die Nutzung Ihres eigenen API-Schlüssels.";
+"这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。" = "Dies sind die nutzungsabhängigen Kosten, die im aktuellen Abrechnungszeitraum über Ihren Tarif hinaus entstanden sind. Das Anzeigebudget dient nur zur Berechnung des Fortschritts und begrenzt nicht die tatsächlichen Ausgaben.";
+"这是整个组织本期的按量付费总额和上限，不是你的个人额度。" = "Dies sind die gesamten nutzungsabhängigen Kosten und das Limit der Organisation im aktuellen Zeitraum, nicht Ihr persönliches Kontingent.";
+"这是整个团队本期的按量付费总额和上限，不是你的个人额度。" = "Dies sind die gesamten nutzungsabhängigen Kosten und das Limit des Teams im aktuellen Zeitraum, nicht Ihr persönliches Kontingent.";
+"点击设置显示预算。CodeUsage 会据此显示消费进度；这个金额不会更改 Cursor 的消费上限。" = "Klicken Sie, um ein Anzeigebudget festzulegen. CodeUsage zeigt damit den Ausgabenfortschritt an; Ihr Cursor-Ausgabenlimit wird dadurch nicht geändert.";
+"预算只用于显示按量付费进度和剩余额度，不会限制实际消费" = "Das Budget dient nur zur Anzeige des Fortschritts und des verbleibenden Kontingents für die nutzungsabhängige Abrechnung und begrenzt nicht die tatsächlichen Ausgaben.";
 
 "登录时自动启动 CodeUsage？" = "CodeUsage bei der Anmeldung starten?";
 "开启" = "Aktivieren";

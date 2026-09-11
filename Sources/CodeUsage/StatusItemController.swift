@@ -1,4 +1,5 @@
 import AppKit
+import CodeUsageDisplay
 import Combine
 import SwiftUI
 
@@ -59,7 +60,6 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
         panel.onCancel = { [weak self] in
             self?.hidePanel()
         }
-
         storeCancellable = store.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -96,6 +96,19 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
         stopDismissMonitoring()
     }
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard urls.contains(where: { $0.scheme == "codeusage" }) else { return }
+        showPanelFromStatusItem()
+    }
+
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        showPanelFromStatusItem()
+        return true
+    }
+
     @objc private func togglePanel(_ sender: NSStatusBarButton) {
         if panel.isVisible {
             hidePanel()
@@ -112,6 +125,11 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
         panel.makeKeyAndOrderFront(nil)
         setStatusItemHighlighted(true)
         startDismissMonitoring()
+    }
+
+    private func showPanelFromStatusItem() {
+        guard let button = statusItem?.button else { return }
+        showPanel(relativeTo: button)
     }
 
     private func offerLaunchAtLoginIfNeeded() {
@@ -289,6 +307,10 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeStatusImage() -> NSImage {
         let providers = store.visibleMenuBarProviders
+        if store.menuBarPresentationMode == .brief {
+            return makeBriefStatusImage(hasVisibleProviders: !providers.isEmpty)
+        }
+
         let height: CGFloat = 20
         let appLogoSize: CGFloat = 20
         let providerLogoSize: CGFloat = 13
@@ -300,7 +322,13 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
             .foregroundColor: NSColor.black
         ]
 
-        let values = providers.map { store.remainingText(for: $0) }
+        let values = providers.map { provider in
+            let remaining = store.remainingText(for: provider)
+            if store.menuBarPresentationMode == .full {
+                return "\(provider.title) \(remaining)"
+            }
+            return remaining
+        }
         let valueSizes = values.map {
             ($0 as NSString).size(withAttributes: attributes)
         }
@@ -348,6 +376,39 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
             x += ceil(valueSize.width)
         }
 
+        image.unlockFocus()
+        image.isTemplate = true
+        return image
+    }
+
+    private func makeBriefStatusImage(hasVisibleProviders: Bool) -> NSImage {
+        let height: CGFloat = 20
+        let logoSize: CGFloat = 20
+        let spacing: CGFloat = 5
+        let value = store.lowestRemainingText as NSString
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
+            .foregroundColor: NSColor.black
+        ]
+        let valueSize = value.size(withAttributes: attributes)
+        let width = logoSize + (hasVisibleProviders ? spacing + ceil(valueSize.width) : 0)
+        let image = NSImage(size: NSSize(width: ceil(width), height: height))
+        image.lockFocus()
+        draw(
+            appLogoImage(size: logoSize),
+            atX: 0,
+            size: logoSize,
+            canvasHeight: height
+        )
+        if hasVisibleProviders {
+            value.draw(
+                at: NSPoint(
+                    x: logoSize + spacing,
+                    y: floor((height - valueSize.height) / 2) - 1
+                ),
+                withAttributes: attributes
+            )
+        }
         image.unlockFocus()
         image.isTemplate = true
         return image

@@ -7,6 +7,8 @@ SDK_PATH="${CODEUSAGE_SDK_PATH:-$(xcrun --sdk macosx --show-sdk-path)}"
 NATIVE_APP="$PROJECT_DIR/dist/CodeUsage.app"
 UNIVERSAL_APP="$PROJECT_DIR/dist-universal/CodeUsage.app"
 X86_BUILD_DIR="$PROJECT_DIR/.build-x86-release"
+NATIVE_WIDGET="$NATIVE_APP/Contents/PlugIns/CodeUsageWidgets.appex"
+UNIVERSAL_WIDGET="$UNIVERSAL_APP/Contents/PlugIns/CodeUsageWidgets.appex"
 MODULE_CACHE_DIR="${CLANG_MODULE_CACHE_PATH:-$PROJECT_DIR/.cache/clang-module-cache}"
 
 mkdir -p "$MODULE_CACHE_DIR"
@@ -23,8 +25,13 @@ swift build \
   --triple x86_64-apple-macosx13.0
 
 X86_BINARY="$X86_BUILD_DIR/x86_64-apple-macosx/release/CodeUsage"
+X86_WIDGET_BINARY="$X86_BUILD_DIR/x86_64-apple-macosx/release/CodeUsageWidgets"
 if [[ ! -f "$X86_BINARY" ]]; then
   echo "Missing x86_64 build product: $X86_BINARY" >&2
+  exit 1
+fi
+if [[ ! -f "$X86_WIDGET_BINARY" ]]; then
+  echo "Missing x86_64 widget build product: $X86_WIDGET_BINARY" >&2
   exit 1
 fi
 
@@ -36,13 +43,30 @@ mkdir -p "${UNIVERSAL_APP:h}"
   "$NATIVE_APP/Contents/MacOS/CodeUsage" \
   "$X86_BINARY" \
   -output "$UNIVERSAL_APP/Contents/MacOS/CodeUsage"
+/usr/bin/lipo -create \
+  "$NATIVE_WIDGET/Contents/MacOS/CodeUsageWidgets" \
+  "$X86_WIDGET_BINARY" \
+  -output "$UNIVERSAL_WIDGET/Contents/MacOS/CodeUsageWidgets"
+"$PROJECT_DIR/Scripts/verify_widget_entrypoint.sh" \
+  "$UNIVERSAL_WIDGET/Contents/MacOS/CodeUsageWidgets"
 
-/usr/bin/codesign --force --deep --sign - "$UNIVERSAL_APP"
+/usr/bin/codesign \
+  --force \
+  --sign - \
+  --entitlements "$PROJECT_DIR/Config/CodeUsageWidgetsLocal.entitlements" \
+  "$UNIVERSAL_WIDGET"
+/usr/bin/codesign --force --sign - "$UNIVERSAL_APP"
 /usr/bin/codesign --verify --deep --strict "$UNIVERSAL_APP"
 
 ARCHS=$(/usr/bin/lipo -archs "$UNIVERSAL_APP/Contents/MacOS/CodeUsage")
 if [[ "$ARCHS" != *arm64* || "$ARCHS" != *x86_64* ]]; then
   echo "Universal verification failed: $ARCHS" >&2
+  exit 1
+fi
+WIDGET_ARCHS=$(/usr/bin/lipo -archs \
+  "$UNIVERSAL_WIDGET/Contents/MacOS/CodeUsageWidgets")
+if [[ "$WIDGET_ARCHS" != *arm64* || "$WIDGET_ARCHS" != *x86_64* ]]; then
+  echo "Universal widget verification failed: $WIDGET_ARCHS" >&2
   exit 1
 fi
 

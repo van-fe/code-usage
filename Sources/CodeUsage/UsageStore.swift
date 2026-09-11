@@ -1,5 +1,7 @@
 import Combine
+import CodeUsageDisplay
 import Foundation
+import WidgetKit
 
 @MainActor
 final class UsageStore: ObservableObject {
@@ -19,6 +21,8 @@ final class UsageStore: ObservableObject {
     @Published private(set) var simulationCategory: SubscriptionCategory?
     @Published private(set) var isCloudSyncEnabled: Bool
     @Published private(set) var cloudSyncStatus: CloudSyncStatus
+    @Published private(set) var menuBarPresentationMode: UsagePresentationMode
+    @Published private(set) var widgetSyncError: String?
 
     private let defaults: UserDefaults
     private let codex = CodexProvider()
@@ -33,6 +37,7 @@ final class UsageStore: ObservableObject {
     private let cursorIndividualLimitKey = "cursor.onDemand.personalLimitCents.v1"
     private let archivedProvidersKey = "providers.archived.v1"
     private let cloudSyncEnabledKey = "icloud.sync.enabled.v1"
+    private let menuBarPresentationModeKey = "presentation.menuBar.mode.v1"
 
     init(
         defaults: UserDefaults = .standard,
@@ -44,6 +49,10 @@ final class UsageStore: ObservableObject {
             && defaults.bool(forKey: "icloud.sync.enabled.v1")
         self.isCloudSyncEnabled = cloudSyncEnabled
         self.cloudSyncStatus = cloudSyncEnabled ? .idle : .disabled
+        self.menuBarPresentationMode = UsagePresentationMode(
+            storedValue: defaults.string(forKey: "presentation.menuBar.mode.v1")
+        )
+        self.widgetSyncError = nil
         self.archivedProviders = ProviderArchive.decode(
             defaults.stringArray(forKey: "providers.archived.v1") ?? []
         )
@@ -54,6 +63,7 @@ final class UsageStore: ObservableObject {
             self.archivedProviders = []
             self.states = SubscriptionSimulation.states(for: simulationCategory)
             self.lastUpdated = Date()
+            publishSharedSnapshot()
             return
         }
         if let stored = defaults.object(
@@ -74,6 +84,7 @@ final class UsageStore: ObservableObject {
             defaults.object(forKey: provider.menuBarPreferenceKey) == nil
                 || defaults.bool(forKey: provider.menuBarPreferenceKey)
         })
+        publishSharedSnapshot()
     }
 
     func start() {
@@ -95,10 +106,12 @@ final class UsageStore: ObservableObject {
             states = SubscriptionSimulation.states(for: simulationCategory)
             installedProviders = ProviderKind.allCases
             lastUpdated = Date()
+            publishSharedSnapshot()
             return
         }
         guard !isRefreshing else { return }
         isRefreshing = true
+        publishSharedSnapshot()
         installedProviders = ProviderInstallation.installedProviders()
         let providersToRefresh = displayedProviders
         let cursorLimit = cursorIndividualLimitCents
@@ -149,6 +162,7 @@ final class UsageStore: ObservableObject {
         }
         lastUpdated = Date()
         isRefreshing = false
+        publishSharedSnapshot()
         scheduleCloudSync(successfulSnapshots)
         if refreshAfterCurrent {
             refreshAfterCurrent = false
@@ -216,6 +230,12 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    func setMenuBarPresentationMode(_ mode: UsagePresentationMode) {
+        guard mode != menuBarPresentationMode else { return }
+        menuBarPresentationMode = mode
+        defaults.set(mode.rawValue, forKey: menuBarPresentationModeKey)
+    }
+
     var isSimulationMode: Bool {
         simulationCategory != nil
     }
@@ -226,6 +246,7 @@ final class UsageStore: ObservableObject {
         states = SubscriptionSimulation.states(for: category)
         installedProviders = ProviderKind.allCases
         lastUpdated = Date()
+        publishSharedSnapshot()
     }
 
     func setCursorIndividualLimitDollars(_ value: Double?) {
@@ -269,6 +290,7 @@ final class UsageStore: ObservableObject {
 
     private func setArchivedProviders(_ providers: Set<ProviderKind>) {
         archivedProviders = providers
+        publishSharedSnapshot()
         guard simulationCategory == nil else { return }
         defaults.set(ProviderArchive.encode(providers), forKey: archivedProvidersKey)
     }
@@ -304,22 +326,6 @@ final class UsageStore: ObservableObject {
                     ? L10n.format("menu.updating", provider.title)
                     : L10n.format("menu.no_data", provider.title)
             }
-            if provider == .cursor, metric.id == "on_demand_personal" {
-                let key = snapshot?.subscriptionCategory.hasSharedOrganizationContext == true
-                    ? (metric.allowsLimitEditing
-                        ? "menu.cursor.personal_budget_remaining"
-                        : "menu.cursor.personal_limit_remaining")
-                    : (metric.allowsLimitEditing
-                        ? "menu.cursor.budget_remaining"
-                        : "menu.cursor.limit_remaining")
-                return L10n.format(key, Int(metric.remainingPercent.rounded()))
-            }
-            if provider == .cursor {
-                return L10n.format(
-                    "menu.cursor.included_remaining",
-                    Int(metric.remainingPercent.rounded())
-                )
-            }
             return L10n.format(
                 "menu.provider_remaining",
                 provider.title,
@@ -334,6 +340,81 @@ final class UsageStore: ObservableObject {
             return "\(Int(metric.remainingPercent.rounded()))%"
         }
         return isRefreshing ? "…" : "–"
+    }
+
+    var lowestRemainingText: String {
+        let percentages = visibleMenuBarProviders.compactMap {
+            state(for: $0).snapshot?.primaryMetric?.remainingPercent
+        }
+        if let minimum = percentages.min() {
+            return "\(Int(minimum.rounded()))%"
+        }
+        return isRefreshing ? "…" : "–"
+    }
+
+    private func publishSharedSnapshot() {
+        let providers = displayedProviders.map { provider in
+            let displayState = state(for: provider)
+            let snapshot = displayState.snapshot
+            let primaryMetric = snapshot?.widgetPrimaryMetric
+            let sharedMetrics: [SharedUsageMetric]
+            if let snapshot {
+                sharedMetrics = snapshot.metrics.map { metric in
+                    SharedUsageMetric(
+                        id: metric.id,
+                        title: L10n.userFacing(metric.title),
+                        groupTitle: metric.group.map {
+                            UsageMetricDisplayFormatter.groupTitle(
+                                $0,
+                                provider: provider,
+                                snapshot: snapshot
+                            )
+                        },
+                        usedPercent: metric.showsProgress ? metric.clampedPercent : nil,
+                        remainingPercent: metric.showsProgress
+                            ? Int(metric.remainingPercent.rounded())
+                            : nil,
+                        deadlineText: metric.deadlineDescription(),
+                        valueText: UsageMetricDisplayFormatter.valueText(
+                            metric,
+                            provider: provider,
+                            snapshot: snapshot
+                        ),
+                        suggestedUsedPercent: metric.showsProgress
+                            ? metric.suggestedUsedPercent()
+                            : nil,
+                        showsProgress: metric.showsProgress,
+                        isPrimary: metric.id == primaryMetric?.id
+                    )
+                }
+            } else {
+                sharedMetrics = []
+            }
+            return SharedUsageProvider(
+                id: provider.rawValue,
+                title: provider.title,
+                planName: snapshot?.planName,
+                metricTitle: primaryMetric.map { L10n.userFacing($0.title) },
+                remainingPercent: primaryMetric.flatMap {
+                    $0.showsProgress ? Int($0.remainingPercent.rounded()) : nil
+                },
+                isStale: displayState.isStale,
+                metrics: sharedMetrics,
+                errorMessage: displayState.errorMessage.map(L10n.userFacing)
+            )
+        }
+        let sharedSnapshot = SharedUsageSnapshot(
+            providers: providers,
+            updatedAt: lastUpdated,
+            isRefreshing: isRefreshing
+        )
+        do {
+            try SharedUsageSnapshotStore.write(sharedSnapshot)
+            widgetSyncError = nil
+        } catch {
+            widgetSyncError = error.localizedDescription
+        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private struct CapturedFailure: Sendable {

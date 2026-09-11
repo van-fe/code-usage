@@ -44,11 +44,12 @@ GitHub Actions 不保存或使用任何 Apple 凭证。PR 和 `main` 分支会�
    export CODEUSAGE_BUNDLE_IDENTIFIER='com.example.CodeUsage'
    export CODEUSAGE_NOTARY_PROFILE='CodeUsage-notary'
    export CODEUSAGE_PROVISIONING_PROFILE="$HOME/Downloads/CodeUsage_Developer_ID.provisionprofile"
+   export CODEUSAGE_WIDGET_PROVISIONING_PROFILE="$HOME/Downloads/CodeUsage_Widgets_Developer_ID.provisionprofile"
    ```
 
 ## CloudKit 发布前配置
 
-CodeUsage 的正式 Bundle ID 是 `com.van-fe.CodeUsage`，iCloud Container 是 `iCloud.com.van-fe.CodeUsage`。Apple Developer 后台需让该 App ID 启用 iCloud/CloudKit 并关联这个 Container，然后创建与该 App ID 对应的 **Developer ID provisioning profile**。Profile 只保存在发布者本机，不提交到 GitHub。
+CodeUsage 的正式 Bundle ID 是 `com.van-fe.CodeUsage`，Widget 扩展 Bundle ID 是 `com.van-fe.CodeUsage.widgets`，iCloud Container 是 `iCloud.com.van-fe.CodeUsage`，App Group 是 `group.com.van-fe.CodeUsage.shared`。Apple Developer 后台需让主 App ID 启用 iCloud/CloudKit 与 App Groups，让 Widget App ID 启用 App Groups，并分别创建对应的 **Developer ID provisioning profile**。两个 Profile 只保存在发布者本机，不提交到 GitHub。
 
 CloudKit Production 环境需要先存在 `UsageSnapshot` Record Type，字段如下：
 
@@ -59,7 +60,7 @@ CloudKit Production 环境需要先存在 `UsageSnapshot` Record Type，字段�
 | `updatedAt` | Date/Time |
 | `payload` | Bytes |
 
-在 CloudKit Console 中确认 Development schema 后，将 schema 部署到 Production。正式发布脚本固定使用 `Config/CodeUsage.entitlements` 中的 Production 环境；如果 Profile 缺少 Bundle ID、CloudKit、iCloud Container 或 Production 环境，脚本会在签名前终止。
+在 CloudKit Console 中确认 Development schema 后，将 schema 部署到 Production。正式发布脚本固定使用 `Config/CodeUsage.entitlements` 与 `Config/CodeUsageWidgets.entitlements`；如果主 Profile 缺少 Bundle ID、CloudKit、iCloud Container、App Group 或 Production 环境，或 Widget Profile 缺少扩展 Bundle ID 与 App Group，脚本会在签名前终止。
 
 GitHub Actions 不持有 provisioning profile，因此 CI 构建仍为 ad-hoc 签名，运行时不会获得 iCloud 权限。这是预期行为；只有本机正式签名并公证的发布包启用 CloudKit。
 ad-hoc 构建仍使用正式 Bundle ID `com.van-fe.CodeUsage`，以确保本机偏好设置和后续升级路径一致，但不会附带受限的 iCloud entitlements。
@@ -72,19 +73,40 @@ ad-hoc 构建仍使用正式 Bundle ID `com.van-fe.CodeUsage`，以确保本机�
 
 ## 正式发布
 
-Release Please 创建版本 Tag 和 GitHub Release 后，如果需要用 Developer ID 签名和 Apple 公证产物取代自动上传的 ad-hoc 产物，在本机检出该 Tag，并确认工作区干净：
+Release Please 创建版本 Tag 和 GitHub Release 后，推荐在对应的发布提交上运行一键脚本：
 
 ```bash
-git checkout vX.Y.Z
-./Scripts/release_local.sh
+./Scripts/publish_signed_release.sh
 ```
 
-脚本会校验并嵌入 Developer ID provisioning profile，使用 CloudKit entitlements、Hardened Runtime 和安全时间戳签名，完成 App 与 DMG 公证、Staple 票据并执行 Gatekeeper 校验。默认不会连接或修改 GitHub。
+脚本会自动执行以下完整流程：
 
-确认产物后，显式上传到已存在的 GitHub Release：
+1. 同步远端分支和 Tag，并要求工作区干净。
+2. 校验 `version.json`、`HEAD`、本地/远端 Tag 和 GitHub Release target 指向同一提交。
+3. 等待该提交的 `CI` 与 `Release Please` 工作流成功，并确认三个自动发布资产已生成。
+4. 校验 Developer ID、CloudKit provisioning profile 和 notarytool Keychain profile。
+5. 构建 Universal App，完成 Hardened Runtime 签名、App/DMG 双重公证、Staple 和 Gatekeeper 校验。
+6. 覆盖 GitHub Release 的正式 DMG、Universal ZIP 和源码 ZIP。
+7. 从 GitHub 重新下载全部资产，逐字节比对本地产物，并再次验证签名、公证、DMG 内容和源码内容。
+
+该脚本只发布 Release Please 已创建的版本，**不会创建、移动或删除 Git Tag 和 GitHub Release**。任何版本或提交不一致都会直接终止，因此不能用它覆盖旧版本历史。
+
+默认从 `version.json` 推导 Tag，也可以显式指定相同版本：
 
 ```bash
-./Scripts/release_local.sh --upload
+./Scripts/publish_signed_release.sh --tag v0.11.1
 ```
 
-`--upload` 要求当前 `HEAD` 正好位于对应的 `vX.Y.Z` Tag，并使用本机已登录的 GitHub CLI。它会覆盖 Release 中同名的 Universal ZIP 和 DMG，源码 ZIP 保持不变。Apple 私钥和公证凭证始终留在本机 Keychain。
+如果正式资产已经上传，只需重新执行远端下载和严格校验：
+
+```bash
+./Scripts/publish_signed_release.sh --verify-only
+```
+
+在已单独确认 CI 和自动资产的特殊情况下，可以跳过 GitHub Actions 等待：
+
+```bash
+./Scripts/publish_signed_release.sh --skip-workflow-wait
+```
+
+`Scripts/release_local.sh` 仍作为底层构建、签名与公证脚本保留，可在不上传 GitHub 时单独运行。Apple 私钥和公证凭证始终留在本机 Keychain。

@@ -38,6 +38,7 @@ done
 /usr/bin/ditto "$PROJECT_DIR/Sources" "$STAGING_DIR/Sources"
 /usr/bin/ditto "$PROJECT_DIR/Scripts" "$STAGING_DIR/Scripts"
 /usr/bin/ditto "$PROJECT_DIR/.github" "$STAGING_DIR/.github"
+/usr/bin/ditto "$PROJECT_DIR/Config" "$STAGING_DIR/Config"
 
 for asset in \
   AppIcon.svg \
@@ -67,6 +68,7 @@ pushd "$STAGING_DIR" >/dev/null
   release-please-config.json \
   .release-please-manifest.json \
   .github \
+  Config \
   Sources \
   Assets \
   Scripts

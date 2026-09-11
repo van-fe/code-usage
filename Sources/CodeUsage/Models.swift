@@ -535,6 +535,16 @@ struct ProviderSnapshot: Equatable, Sendable {
         }
         return metrics.first(where: \.showsProgress)
     }
+
+    var widgetPrimaryMetric: UsageMetric? {
+        if provider == .cursor,
+           let planUsage = metrics.first(where: {
+               $0.id == "total" && $0.showsProgress
+           }) {
+            return planUsage
+        }
+        return primaryMetric
+    }
 }
 
 struct ProviderDisplayState: Equatable, Sendable {

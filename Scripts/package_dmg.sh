@@ -82,6 +82,8 @@ if [[ "$HEADLESS" == "1" ]]; then
     echo "Headless DMG payload verification failed" >&2
     exit 1
   fi
+  /usr/bin/codesign --verify --deep --strict --all-architectures \
+    "$VERIFY_MOUNT_POINT/CodeUsage.app"
 
   /usr/bin/hdiutil detach "$VERIFY_MOUNT_POINT" >/dev/null
   VERIFY_DEVICE=""
@@ -222,6 +224,8 @@ if [[ ! -d "$VERIFY_MOUNT_POINT/CodeUsage.app" ]] || \
   echo "Final DMG payload verification failed" >&2
   exit 1
 fi
+/usr/bin/codesign --verify --deep --strict --all-architectures \
+  "$VERIFY_MOUNT_POINT/CodeUsage.app"
 
 /usr/bin/hdiutil detach "$VERIFY_MOUNT_POINT" >/dev/null
 VERIFY_DEVICE=""

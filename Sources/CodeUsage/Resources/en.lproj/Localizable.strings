@@ -19,6 +19,7 @@
 "menu.cursor.personal_budget_remaining" = "My Cursor on-demand display budget: %d%% remaining";
 "menu.cursor.personal_limit_remaining" = "My Cursor on-demand limit: %d%% remaining";
 "menu.no_data" = "%@: no data";
+"menu.provider_used" = "%@ · %@: %d%% used";
 "menu.provider_remaining" = "%@: %d%% remaining";
 "menu.tooltip" = "View usage: %@";
 "menu.updating" = "%@: updating…";
@@ -53,6 +54,39 @@
 "launch_at_login.enable_failed" = "Could not enable Launch at Login. Try again later. If it still fails, check CodeUsage in System Settings → General → Login Items.";
 "launch_at_login.disable_failed" = "Could not disable Launch at Login. Try again later. If it still fails, check CodeUsage in System Settings → General → Login Items.";
 
+"简略" = "Brief";
+"中度" = "Moderate";
+"完整" = "Full";
+"展示模式" = "Display Mode";
+"状态栏展示" = "Menu Bar Display";
+"桌面展示" = "Desktop Display";
+"桌面展示模式" = "Desktop Display Mode";
+"关闭桌面展示" = "Turn Off Desktop Display";
+"桌面展示设置" = "Desktop Display Settings";
+"打开用量面板" = "Open Usage Panel";
+"最低剩余" = "Lowest Remaining";
+"暂无可展示的用量" = "No usage to display";
+"暂无数据" = "No Data";
+"简略用量" = "Brief Usage";
+"用一个数字查看当前最低剩余额度。" = "See the lowest remaining allowance at a glance.";
+"中度用量" = "Moderate Usage";
+"并排查看多个工具的主额度。" = "View the primary allowance for several tools side by side.";
+"完整用量" = "Full Usage";
+"查看所有工具、套餐与主额度状态。" = "View every tool, plan, and primary allowance.";
+"打开 CodeUsage 刷新用量" = "Open CodeUsage to refresh usage";
+"CodeUsage 用量" = "CodeUsage Usage";
+"在桌面或通知中心快速查看主要用量。" = "Quickly view primary usage on the desktop or in Notification Center.";
+"用量指标" = "Usage Metric";
+"选择用量指标" = "Choose Usage Metrics";
+"小号可选择 1 个指标，中号最多 3 个；大号始终显示全部指标。" = "Small widgets can select 1 metric, medium up to 3; large widgets always show all metrics.";
+"显示指标" = "Metrics";
+"第二个指标" = "Second Metric";
+"第三个指标" = "Third Metric";
+"显示全部指标" = "Show all metrics";
+"小号选 1 个，中号最多选 3 个。" = "Choose 1 metric for small widgets and up to 3 for medium widgets.";
+"小号和中号可自选指标，大号显示全部用量。" = "Choose metrics in small and medium widgets; large widgets show all usage.";
+"从控制中心快速打开最新用量。" = "Open the latest usage from Control Center.";
+
 "Codex、Cursor、Claude 等 AI 编程工具用量一览" = "Codex, Cursor, Claude & more — usage";
 "订阅模拟 · 示例数据仅用于界面检查" = "Subscription simulation · Sample data for UI review only";
 "所有已安装工具均已归档" = "All installed tools are archived";
@@ -76,6 +110,7 @@
 "订阅类型" = "Subscription Type";
 "模拟数据 · 不读取真实账号" = "Sample data · No real accounts accessed";
 "每 5 分钟自动刷新" = "Refreshes every 5 minutes";
+"小组件同步失败" = "Widget Sync Failed";
 "打开 CodeUsage 的 GitHub 页面" = "Open the CodeUsage GitHub page";
 "使用默认浏览器打开" = "Open in the default browser";
 "开机启动" = "Launch at Login";

@@ -1,4 +1,5 @@
 import AppKit
+import CodeUsageDisplay
 import SwiftUI
 
 private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
@@ -278,6 +279,11 @@ struct DashboardView: View {
                 Text("模拟数据 · 不读取真实账号")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            } else if let widgetSyncError = store.widgetSyncError {
+                Label("小组件同步失败", systemImage: "exclamationmark.triangle")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .help(widgetSyncError)
             } else if let updated = store.lastUpdated {
                 Text(L10n.format(
                     "updated_at",
@@ -316,6 +322,22 @@ struct DashboardView: View {
                     }
                 }
                 .id(localization.language)
+
+                Menu {
+                    Picker(
+                        "展示模式",
+                        selection: Binding(
+                            get: { store.menuBarPresentationMode },
+                            set: { store.setMenuBarPresentationMode($0) }
+                        )
+                    ) {
+                        ForEach(UsagePresentationMode.allCases) { mode in
+                            Text(mode.localizedTitle).tag(mode)
+                        }
+                    }
+                } label: {
+                    Label("状态栏展示", systemImage: "menubar.rectangle")
+                }
 
                 if !store.isSimulationMode {
                     Toggle(
@@ -920,45 +942,11 @@ private struct ProviderCard: View {
 
     private func metricGroupTitle(_ group: UsageMetric.Group) -> String {
         guard let snapshot = state.snapshot else { return group.title }
-        switch snapshot.subscriptionCategory {
-        case .freeTrial:
-            switch group {
-            case .included:
-                let plan = snapshot.planName?.lowercased() ?? ""
-                return plan.contains("trial") ? "试用额度" : "免费额度"
-            case .onDemand: return "额外用量"
-            case .credits: return "额外 Credits"
-            case .personalAddOn: return "额外 Credits"
-            case .organizationShared: return "组织共享额度"
-            }
-        case .individual:
-            switch group {
-            case .included: return "套餐额度"
-            case .onDemand: return "按量付费"
-            case .credits: return "个人加购额度"
-            case .personalAddOn: return "个人加购额度"
-            case .organizationShared: return "组织共享额度"
-            }
-        case .team:
-            switch group {
-            case .included: return "我的套餐额度"
-            case .onDemand: return "按量付费"
-            case .credits:
-                return provider == .qoder ? "组织共享额度" : "工作区额外用量"
-            case .personalAddOn: return "个人加购额度"
-            case .organizationShared: return "组织共享额度"
-            }
-        case .enterprise:
-            switch group {
-            case .included: return "我的套餐额度"
-            case .onDemand: return "按量计费"
-            case .credits: return "组织共享额度"
-            case .personalAddOn: return "个人加购额度"
-            case .organizationShared: return "组织共享额度"
-            }
-        case .unknown:
-            return group.title
-        }
+        return UsageMetricDisplayFormatter.groupTitle(
+            group,
+            provider: provider,
+            snapshot: snapshot
+        )
     }
 
     private func metricRow(
@@ -992,9 +980,9 @@ private struct ProviderCard: View {
                         .buttonStyle(CompactIconButtonStyle())
                         .arrowHoverHelp(cursorLimitEditHelp, width: 280)
                         .accessibilityLabel(cursorLimitAccessibilityLabel)
-                        .accessibilityHint(
+                        .accessibilityHint(Text(L10n.text(
                             "预算只用于显示按量付费进度和剩余额度，不会限制实际消费"
-                        )
+                        )))
                     }
                 }
                 .font(isCursorSummary ? .caption.weight(.semibold) : .caption)
@@ -1193,68 +1181,12 @@ private struct ProviderCard: View {
     }
 
     private func metricValueText(_ metric: UsageMetric) -> String? {
-        guard let value = metric.value else { return nil }
-        switch value {
-        case .usd(let usedCents, let limitCents):
-            let used = currency(usedCents, minimumFractionDigits: 2)
-            if let limitCents {
-                let limit = currency(limitCents, minimumFractionDigits: 0)
-                if provider == .cursor, metric.id == "on_demand_personal" {
-                    let label = L10n.text(metric.allowsLimitEditing ? "预算" : "消费上限")
-                    return L10n.format("usage.value_labeled_limit", used, label, limit)
-                }
-                if provider == .cursor, metric.id == "on_demand_team" {
-                    let label = L10n.text(cursorSubscriptionCategory == .enterprise
-                        ? "组织上限"
-                        : "团队上限")
-                    return L10n.format("usage.value_labeled_limit", used, label, limit)
-                }
-                return L10n.format("usage.value_used_limit", used, limit)
-            }
-            return L10n.format(
-                provider == .cursor ? "usage.value_spent" : "usage.value_used",
-                used
-            )
-        case .quantity(let used, let limit, let remaining, let unit):
-            if let used, let limit {
-                return L10n.format(
-                    "usage.quantity_used_limit",
-                    decimal(used),
-                    decimal(limit),
-                    unit
-                )
-            }
-            if let remaining {
-                return L10n.format("usage.quantity_remaining", decimal(remaining), unit)
-            }
-            if let used {
-                return L10n.format("usage.quantity_used", decimal(used), unit)
-            }
-            return nil
-        }
-    }
-
-    private func currency(_ cents: Int64, minimumFractionDigits: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.locale = L10n.locale
-        formatter.numberStyle = .decimal
-        formatter.usesGroupingSeparator = true
-        formatter.minimumFractionDigits = minimumFractionDigits
-        formatter.maximumFractionDigits = 2
-        let amount = formatter.string(from: NSNumber(value: Double(cents) / 100))
-            ?? String(format: "%.2f", Double(cents) / 100)
-        return "$\(amount)"
-    }
-
-    private func decimal(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.locale = L10n.locale
-        formatter.numberStyle = .decimal
-        formatter.usesGroupingSeparator = true
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: value))
-            ?? String(format: "%.2f", value)
+        guard let snapshot = state.snapshot else { return nil }
+        return UsageMetricDisplayFormatter.valueText(
+            metric,
+            provider: provider,
+            snapshot: snapshot
+        )
     }
 
     private func progressColor(_ used: Double) -> Color {

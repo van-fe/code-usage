@@ -10,6 +10,11 @@ struct SelfTest {
         codexIdentifiesSignInFailures()
         providerArchiveRoundTripsKnownProviders()
         try cloudSnapshotContainsOnlyDisplayData()
+        try sharedUsageSnapshotRoundTripsDisplayData()
+        sharedUsageSnapshotResolvesLocalWidgetContainer()
+        sharedUsageSnapshotMirrorsLocalWidgetAlongsideAppGroup()
+        sharedUsageSnapshotReadsHostSupportFromSandbox()
+        sharedUsageSnapshotUsesOnlyAppGroupInProduction()
         try cursorMapsReportedMetrics()
         try cursorCalculatesTotalWhenMissing()
         try cursorMapsOnDemandUsage()
@@ -149,6 +154,145 @@ struct SelfTest {
         precondition(decoded.metrics.first?.usedPercent == 25)
     }
 
+    private static func sharedUsageSnapshotRoundTripsDisplayData() throws {
+        let snapshot = SharedUsageSnapshot(
+            providers: [
+                SharedUsageProvider(
+                    id: "codex",
+                    title: "Codex",
+                    planName: "Pro",
+                    metricTitle: "5 小时额度",
+                    remainingPercent: 64,
+                    isStale: false,
+                    metrics: [
+                        SharedUsageMetric(
+                            id: "weekly",
+                            title: "周额度",
+                            groupTitle: "套餐额度",
+                            usedPercent: 36,
+                            remainingPercent: 64,
+                            deadlineText: "4 天后重置",
+                            valueText: nil,
+                            suggestedUsedPercent: 43,
+                            showsProgress: true,
+                            isPrimary: true
+                        ),
+                        SharedUsageMetric(
+                            id: "session",
+                            title: "5 小时额度",
+                            groupTitle: "套餐额度",
+                            usedPercent: 18,
+                            remainingPercent: 82,
+                            deadlineText: "2 小时后重置",
+                            valueText: nil,
+                            suggestedUsedPercent: 40,
+                            showsProgress: true,
+                            isPrimary: false
+                        )
+                    ]
+                ),
+                SharedUsageProvider(
+                    id: "cursor",
+                    title: "Cursor",
+                    planName: nil,
+                    metricTitle: "套餐内用量",
+                    remainingPercent: 38,
+                    isStale: true
+                )
+            ],
+            updatedAt: Date(timeIntervalSince1970: 1_900_000_000),
+            isRefreshing: false
+        )
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(SharedUsageSnapshot.self, from: data)
+        precondition(decoded == snapshot)
+        precondition(decoded.lowestRemainingPercent == 38)
+        precondition(decoded.providers[0].primaryMetric?.title == "周额度")
+        precondition(decoded.providers[0].primaryMetric?.usedPercent == 36)
+        precondition(decoded.providers[0].primaryMetric?.deadlineText == "4 天后重置")
+        precondition(decoded.providers[0].displayMetrics.map(\.id) == [
+            "weekly", "session"
+        ])
+        let encoded = String(decoding: data, as: UTF8.self)
+        precondition(!encoded.localizedCaseInsensitiveContains("token"))
+        precondition(!encoded.localizedCaseInsensitiveContains("cookie"))
+    }
+
+    private static func sharedUsageSnapshotResolvesLocalWidgetContainer() {
+        let homeDirectory = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+        let url = SharedUsageSnapshotStore.localWidgetContainerSnapshotURL(
+            homeDirectory: homeDirectory,
+            hostBundleIdentifier: "com.example.CodeUsage"
+        )
+        precondition(url?.path == "/Users/example/Library/Containers/com.example.CodeUsage.widgets/Data/Library/Application Support/CodeUsage/widget-snapshot-v1.json")
+        precondition(SharedUsageSnapshotStore.localWidgetContainerSnapshotURL(
+            homeDirectory: homeDirectory,
+            hostBundleIdentifier: "com.example.CodeUsage.widgets"
+        ) == nil)
+        precondition(SharedUsageSnapshotStore.localWidgetContainerSnapshotURL(
+            homeDirectory: homeDirectory,
+            hostBundleIdentifier: nil
+        ) == nil)
+    }
+
+    private static func sharedUsageSnapshotMirrorsLocalWidgetAlongsideAppGroup() {
+        let homeDirectory = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+        let groupContainerURL = homeDirectory
+            .appendingPathComponent("Library/Group Containers", isDirectory: true)
+            .appendingPathComponent("group.com.example.CodeUsage", isDirectory: true)
+        let urls = SharedUsageSnapshotStore.resolvedWritableSnapshotURLs(
+            homeDirectory: homeDirectory,
+            groupContainerURL: groupContainerURL,
+            hostBundleIdentifier: "com.example.CodeUsage",
+            localFallbackEnabled: true
+        )
+        precondition(urls.contains(
+            groupContainerURL.appendingPathComponent("widget-snapshot-v1.json")
+        ))
+        precondition(urls.contains(URL(fileURLWithPath: "/Users/example/Library/Containers/com.example.CodeUsage.widgets/Data/Library/Application Support/CodeUsage/widget-snapshot-v1.json")))
+    }
+
+    private static func sharedUsageSnapshotReadsHostSupportFromSandbox() {
+        let sandboxHome = URL(
+            fileURLWithPath: "/Users/example/Library/Containers/com.example.CodeUsage.widgets/Data",
+            isDirectory: true
+        )
+        let accountHome = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+        let urls = SharedUsageSnapshotStore.resolvedReadableSnapshotURLs(
+            homeDirectory: sandboxHome,
+            userAccountHomeDirectory: accountHome,
+            groupContainerURL: nil,
+            localFallbackEnabled: true
+        )
+        precondition(urls.first?.path == "/Users/example/Library/Containers/com.example.CodeUsage.widgets/Data/Library/Application Support/CodeUsage/widget-snapshot-v1.json")
+        precondition(urls.contains(URL(fileURLWithPath: "/Users/example/Library/Containers/com.example.CodeUsage.widgets/Data/Library/Application Support/CodeUsage/widget-snapshot-v1.json")))
+        precondition(urls.contains(URL(fileURLWithPath: "/Users/example/Library/Application Support/CodeUsage/widget-snapshot-v1.json")))
+    }
+
+    private static func sharedUsageSnapshotUsesOnlyAppGroupInProduction() {
+        let homeDirectory = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+        let groupContainerURL = homeDirectory
+            .appendingPathComponent("Library/Group Containers", isDirectory: true)
+            .appendingPathComponent("group.com.example.CodeUsage", isDirectory: true)
+        let readURLs = SharedUsageSnapshotStore.resolvedReadableSnapshotURLs(
+            homeDirectory: homeDirectory,
+            userAccountHomeDirectory: homeDirectory,
+            groupContainerURL: groupContainerURL,
+            localFallbackEnabled: false
+        )
+        let writeURLs = SharedUsageSnapshotStore.resolvedWritableSnapshotURLs(
+            homeDirectory: homeDirectory,
+            groupContainerURL: groupContainerURL,
+            hostBundleIdentifier: "com.example.CodeUsage",
+            localFallbackEnabled: false
+        )
+        let expected = [groupContainerURL.appendingPathComponent(
+            "widget-snapshot-v1.json"
+        )]
+        precondition(readURLs == expected)
+        precondition(writeURLs == expected)
+    }
+
     private static func cursorMapsReportedMetrics() throws {
         let usage = """
         {
@@ -218,6 +362,7 @@ struct SelfTest {
         precondition(snapshot.subscriptionCategory == .team)
         precondition(personal.allowsLimitEditing)
         precondition(snapshot.primaryMetric?.id == "on_demand_personal")
+        precondition(snapshot.widgetPrimaryMetric?.id == "total")
         guard case .usd(let used, let limit) = personal.value else {
             preconditionFailure("Expected personal USD usage")
         }
@@ -280,6 +425,7 @@ struct SelfTest {
         precondition(abs(snapshot.metrics[0].usedPercent - 30.2) < 0.000_001)
         precondition(snapshot.metrics[1].usedPercent == 25)
         precondition(snapshot.primaryMetric?.id == "on_demand_personal")
+        precondition(snapshot.widgetPrimaryMetric?.id == "on_demand_personal")
     }
 
     private static func cursorLabelsPersonalAndTeamUsage() throws {

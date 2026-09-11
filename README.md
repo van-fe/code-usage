@@ -14,7 +14,8 @@ Project homepage: <https://github.com/van-fe/code-usage>
 
 ## Features
 
-- Show icons and remaining percentages for multiple tools in the menu bar, with independent visibility controls for each tool.
+- Show usage in the menu bar with Brief, Moderate, and Full display modes, plus independent visibility controls for each tool.
+- Add one adaptive system widget to Notification Center on macOS 13+, or place it on the desktop on macOS 14+, and choose its small, medium, or large size.
 - Open a right-aligned panel from the menu bar while preserving the native selected state.
 - Refresh usage or open the corresponding app with one click; buttons include hover and pressed feedback.
 - Refresh automatically every five minutes; when a request fails, retain the most recent successful data and mark it as stale.
@@ -22,7 +23,7 @@ Project homepage: <https://github.com/van-fe/code-usage>
 - Separate Cursor plan usage from on-demand spending; personal plans show current-period spending, while team and enterprise plans distinguish personal and organization spending.
 - Provide an isolated subscription simulation mode for checking free, personal, team, and enterprise layouts.
 - Launch automatically at login, with an option to disable it at any time from the bottom of the panel.
-- Optionally sync a reduced usage snapshot through iCloud for future iPhone and widget clients.
+- Optionally sync a reduced usage snapshot through iCloud for future iPhone clients.
 - Open the CodeUsage project homepage from the GitHub button at the bottom of the panel.
 - Show a clear empty state and guidance when no supported tools are detected.
 - No telemetry, and no login tokens are stored, logged, or printed.
@@ -48,7 +49,7 @@ Cursor data is divided into two groups:
 - **Included usage**: total usage, Auto, and specified models (API). Auto and specified-model usage use different accounting methods and cannot be added together directly.
 - **On-demand spending**: personal plans show current-period spending. Separate personal and team or organization spending is shown only when the account is confirmed to be on a team or enterprise plan.
 
-If Cursor does not return a spending limit, you can set a display budget in CodeUsage. This value is used only to calculate the progress bar and remaining percentage. It does not change the spending limit in Cursor or stop actual spending. When set, the menu bar prioritizes the reference remaining percentage for on-demand spending; otherwise, it shows total plan usage.
+If Cursor does not return a spending limit, you can set a display budget in CodeUsage. This value is used only to calculate the progress bar and remaining percentage. It does not change the spending limit in Cursor or stop actual spending. When set, the menu bar prioritizes the reference remaining percentage for on-demand spending; otherwise, it shows the remaining percentage for total plan usage.
 
 ## Subscription Simulation Mode
 
@@ -92,14 +93,16 @@ The green marker on a progress bar represents the suggested cumulative usage per
 
 1. Go to [Releases](https://github.com/van-fe/code-usage/releases) and download the latest `CodeUsage-*-macos-universal.dmg`.
 2. Open the DMG and drag `CodeUsage.app` into the Applications folder.
-3. Launch CodeUsage. A dashboard icon and the remaining usage for enabled tools will appear in the menu bar.
+3. Launch CodeUsage. A dashboard icon and the remaining percentage for enabled tools will appear in the menu bar.
+
+Use the gear menu to choose a menu bar mode. To add the system widget, edit the macOS widget gallery, choose CodeUsage, and select the size you need. On macOS 14 or later, right-click the widget and choose Edit Widget: small widgets can show 1 selected metric, medium widgets up to 3, and large widgets always show every metric grouped by provider.
 
 The Universal build supports:
 
 - Apple Silicon: `arm64`
 - Intel: `x86_64`
 
-System requirement: macOS 13 Ventura or later.
+App requirement: macOS 13 Ventura or later. The configurable system widget requires macOS 14 Sonoma or later.
 
 ### Signing and Security
 
@@ -115,7 +118,7 @@ CodeUsage reads existing sign-in states locally and sends requests only to each 
 - **Kiro**: reads local sign-in records from Kiro IDE or CLI and uses only short-lived access tokens; it does not use refresh tokens or read device registration keys or browser cookies.
 - **Qoder**: first calls the local usage control interface of the signed-in Qoder CLI. If the CLI is unavailable, it uses the owner- and permission-validated `.info.json` and Unix socket to call the Qoder IDE JSON-RPC service. Qoder handles authentication; CodeUsage does not read, decrypt, or save Qoder tokens.
 
-The app contains no telemetry and does not upload usage data to a CodeUsage server. iCloud sync is off by default. When explicitly enabled, it writes only provider names, plan names, usage metrics, percentages, amounts or counts, and refresh timestamps to the user's private CloudKit database. Access tokens, refresh tokens, cookies, local databases, file paths, raw command output, and raw server responses are excluded from the sync model. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
+The app contains no telemetry and does not upload usage data to a CodeUsage server. Widgets receive only a local App Group snapshot containing provider names, plan names, usage metrics, percentages, amounts or counts, stale state, and refresh time. iCloud sync is off by default. When explicitly enabled, it writes only provider names, plan names, usage metrics, percentages, amounts or counts, and refresh timestamps to the user's private CloudKit database. Access tokens, refresh tokens, cookies, local databases, file paths, raw command output, and raw server responses are excluded from both snapshot models. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
 
 ## Build from Source
 
