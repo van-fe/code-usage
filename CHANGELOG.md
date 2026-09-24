@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/van-fe/code-usage/compare/v0.12.1...v0.12.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* restore usage suggestions except team spending ([#10](https://github.com/van-fe/code-usage/issues/10)) ([d6d0828](https://github.com/van-fe/code-usage/commit/d6d08283538af2048af7316fbbe993ae4d46d8d6))
+
 ## [0.12.1](https://github.com/van-fe/code-usage/compare/v0.12.0...v0.12.1) (2026-09-24)
 
 
