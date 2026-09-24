@@ -2,6 +2,7 @@ import AppKit
 import CodeUsageDisplay
 import SwiftUI
 
+private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
 
 struct DashboardView: View {
     @ObservedObject var store: UsageStore
@@ -876,6 +877,7 @@ private struct ProviderCard: View {
 
     private struct SharedMetricTimeline: Equatable {
         let deadline: String
+        let suggestedPercent: Int?
     }
 
     private func sharedTimeline(for metrics: [UsageMetric]) -> SharedMetricTimeline? {
@@ -888,7 +890,22 @@ private struct ProviderCard: View {
               deadlines.dropFirst().allSatisfy({ $0 == deadline })
         else { return nil }
 
-        return SharedMetricTimeline(deadline: deadline)
+        let suggestions = progressMetrics.compactMap {
+            $0.suggestedUsedPercent().map { Int($0.rounded()) }
+        }
+        let suggestedPercent: Int?
+        if suggestions.count == progressMetrics.count,
+           let suggested = suggestions.first,
+           suggestions.dropFirst().allSatisfy({ $0 == suggested }) {
+            suggestedPercent = suggested
+        } else {
+            suggestedPercent = nil
+        }
+
+        return SharedMetricTimeline(
+            deadline: deadline,
+            suggestedPercent: suggestedPercent
+        )
     }
 
     private func metricGroupHeader(
@@ -906,8 +923,16 @@ private struct ProviderCard: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 if let timeline {
-                    Text(timeline.deadline)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 3) {
+                        Text(timeline.deadline)
+                            .foregroundStyle(.secondary)
+                        if let suggested = timeline.suggestedPercent {
+                            Text("·")
+                                .foregroundStyle(.secondary)
+                            Text(L10n.format("usage.suggested_percent", suggested))
+                                .foregroundStyle(suggestedUsageColor)
+                        }
+                    }
                     .font(.system(size: 9, weight: .medium))
                     .monospacedDigit()
                 }
@@ -928,6 +953,7 @@ private struct ProviderCard: View {
         _ metric: UsageMetric,
         showsInlineTimeline: Bool
     ) -> some View {
+        let suggested = metric.showsProgress ? metric.suggestedUsedPercent() : nil
         let isCursorSummary = provider == .cursor && metric.id == "total"
         let isCursorDetail = provider == .cursor && ["auto", "api"].contains(metric.id)
         return VStack(alignment: .leading, spacing: 5) {
@@ -988,11 +1014,26 @@ private struct ProviderCard: View {
                 HStack(spacing: 7) {
                     UsageProgressBar(
                         usedPercent: metric.clampedPercent,
+                        suggestedPercent: suggested,
                         fillColor: progressColor(metric.clampedPercent)
                     )
+                    if showsInlineTimeline, let suggested {
+                        HStack(spacing: 3) {
+                            Circle()
+                                .fill(suggestedUsageColor)
+                                .frame(width: 4, height: 4)
+                            Text(L10n.format(
+                                "usage.suggested_percent",
+                                Int(suggested.rounded())
+                            ))
+                        }
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(suggestedUsageColor)
+                        .fixedSize()
+                    }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(progressAccessibilityLabel(metric))
+                .accessibilityLabel(progressAccessibilityLabel(metric, suggested: suggested))
                 if let valueText = metricValueText(metric) {
                     Text(valueText)
                         .font(.system(size: 9, weight: .medium))
@@ -1004,11 +1045,18 @@ private struct ProviderCard: View {
         .padding(.leading, isCursorDetail ? 8 : 0)
     }
 
-    private func progressAccessibilityLabel(_ metric: UsageMetric) -> String {
-        L10n.format(
+    private func progressAccessibilityLabel(_ metric: UsageMetric, suggested: Double?) -> String {
+        var value = L10n.format(
             "usage.accessibility_used_percent",
             Int(metric.clampedPercent.rounded())
         )
+        if let suggested {
+            value += L10n.format(
+                "usage.accessibility_suggested_percent",
+                Int(suggested.rounded())
+            )
+        }
+        return value
     }
 
     private func metricHelp(_ metric: UsageMetric) -> String? {
@@ -1190,6 +1238,7 @@ private struct ProviderCard: View {
 
 private struct UsageProgressBar: View {
     let usedPercent: Double
+    let suggestedPercent: Double?
     let fillColor: Color
 
     var body: some View {
@@ -1202,12 +1251,22 @@ private struct UsageProgressBar: View {
                 Capsule()
                     .fill(fillColor)
                     .frame(width: width * usedPercent / 100, height: 6)
+                if let suggestedPercent {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(suggestedUsageColor)
+                        .frame(width: 2, height: 10)
+                        .offset(x: markerOffset(width: width, percent: suggestedPercent))
+                }
             }
             .frame(maxHeight: .infinity, alignment: .center)
         }
         .frame(height: 10)
     }
 
+    private func markerOffset(width: CGFloat, percent: Double) -> CGFloat {
+        let center = width * min(max(percent, 0), 100) / 100
+        return min(max(center - 1, 0), max(width - 2, 0))
+    }
 }
 
 struct CompactActionButtonStyle: ButtonStyle {
