@@ -16,7 +16,9 @@ struct SelfTest {
         sharedUsageSnapshotReadsHostSupportFromSandbox()
         sharedUsageSnapshotUsesOnlyAppGroupInProduction()
         try cursorMapsReportedMetrics()
+        try cursorPreservesOriginalBillingFields()
         try cursorCalculatesTotalWhenMissing()
+        try cursorUsesPersonalSummaryWhenTeamOmitsIndividualSpend()
         try cursorMapsOnDemandUsage()
         try cursorPrefersProviderIndividualLimit()
         try cursorKeepsSpendWithoutIndividualLimit()
@@ -313,6 +315,40 @@ struct SelfTest {
         precondition(snapshot.metrics.allSatisfy { $0.group == .included })
     }
 
+    private static func cursorPreservesOriginalBillingFields() throws {
+        let usage = """
+        {
+          "enabled": true,
+          "planUsage": {
+            "limit": 2000,
+            "includedSpend": 2000,
+            "totalPercentUsed": 97.225
+          },
+          "spendLimitUsage": {
+            "individualUsed": 350,
+            "individualLimit": 1000,
+            "limitType": "team"
+          }
+        }
+        """.data(using: .utf8)!
+        let summary = """
+        {"individualUsage":{"plan":{"used":2000,"limit":2000},
+                            "onDemand":{"used":0,"limit":5000}}}
+        """.data(using: .utf8)!
+        let snapshot = try CursorProvider.map(
+            usageData: usage,
+            personalSummaryData: summary
+        )
+        let total = snapshot.metrics.first { $0.id == "total" }!
+        precondition(total.usedPercent == 97.225 && total.value == nil)
+        let personal = snapshot.metrics.first { $0.id == "on_demand_personal" }!
+        precondition(personal.usedPercent == 35)
+        guard case .usd(let used, let limit) = personal.value else {
+            preconditionFailure("Expected original personal spend")
+        }
+        precondition(used == 350 && limit == 1000)
+    }
+
     private static func cursorCalculatesTotalWhenMissing() throws {
         let usage = """
         {
@@ -324,6 +360,61 @@ struct SelfTest {
         let snapshot = try CursorProvider.map(usageData: usage)
         precondition(snapshot.primaryMetric?.usedPercent == 25)
         precondition(snapshot.primaryMetric?.windowDuration == nil)
+    }
+
+    private static func cursorUsesPersonalSummaryWhenTeamOmitsIndividualSpend() throws {
+        let usage = """
+        {
+          "enabled": true,
+          "planUsage": {
+            "limit": 2000,
+            "includedSpend": 2000,
+            "totalSpend": 7778,
+            "totalPercentUsed": 97.225,
+            "apiPercentUsed": 97.225
+          },
+          "spendLimitUsage": {
+            "pooledLimit": "45800000",
+            "pooledUsed": 1243372,
+            "limitType": "team"
+          }
+        }
+        """.data(using: .utf8)!
+        let summary = """
+        {
+          "individualUsage": {
+            "plan": {"used": 2000, "limit": 2000, "remaining": 0},
+            "onDemand": {"enabled": true, "used": 0, "limit": null}
+          }
+        }
+        """.data(using: .utf8)!
+        let snapshot = try CursorProvider.map(
+            usageData: usage,
+            personalSummaryData: summary
+        )
+        let total = snapshot.metrics.first { $0.id == "total" }!
+        precondition(total.usedPercent == 100)
+        guard case .usd(let includedUsed, let includedLimit) = total.value else {
+            preconditionFailure("Expected personal plan amount")
+        }
+        precondition(includedUsed == 2000 && includedLimit == 2000)
+        precondition(snapshot.metrics.contains { $0.id == "auto" } == false)
+        precondition(snapshot.metrics.first { $0.id == "api" }?.title == "第三方模型（API）")
+        precondition(snapshot.metrics.first { $0.id == "api" }?.usedPercent == 97.225)
+        let personal = snapshot.metrics.first { $0.id == "on_demand_personal" }!
+        precondition(personal.title == "我的消费")
+        precondition(personal.showsProgress == false)
+        guard case .usd(let used, let limit) = personal.value else {
+            preconditionFailure("Expected personal USD usage")
+        }
+        precondition(used == 0 && limit == nil)
+        precondition(snapshot.metrics.contains { $0.id == "on_demand_team" })
+        precondition(snapshot.metrics.first { $0.id == "on_demand_team" }?
+            .suggestedUsedPercent() == nil)
+
+        let withoutSummary = try CursorProvider.map(usageData: usage)
+        precondition(withoutSummary.metrics.contains { $0.id == "on_demand_personal" } == false)
+        precondition(withoutSummary.note != nil)
     }
 
     private static func cursorMapsOnDemandUsage() throws {

@@ -3,7 +3,32 @@
 "cloud.last_synced" = "最近同步於 %@。";
 "cursor.budget.accessibility" = "修改顯示預算，目前為 $%@";
 "cursor.budget.edit_help" = "目前按 $%@ 的顯示預算計算進度。點擊修改。這個金額不會更改 Cursor 的消費上限。";
-"cursor.help.personal_shared" = "這是你本期個人產生的按量付費金額，與「%@」分開顯示。顯示預算只用於計算進度，不會限制實際消費。";
+"cursor.help.personal_shared" = "這是你的個人消費明細，可能已包含在「%@」中；兩項金額不能相加。顯示預算只影響 CodeUsage 的進度。";
+
+"基础套餐额度" = "基本方案額度";
+"其他模型（API）" = "其他模型（API）";
+"综合额度进度" = "綜合額度進度";
+"Claude 账号的共用订阅额度" = "Claude 帳號共用的訂閱額度";
+"消费与共享额度" = "消費與共享額度";
+"menu.provider_remaining_metric" = "%@ · %@剩餘 %d%%";
+"menu.cursor.reported_progress" = "Cursor · 綜合進度已用 %d%%（非金額餘額）";
+"menu.cursor.personal_spend_limit_remaining" = "Cursor · 個人消費上限剩餘 %d%%";
+"metric.help.cursor.total_base" = "這是個人基本方案額度的使用進度，不含可能提供的贈送用量；達到 100% 不代表已產生按量付費。";
+"metric.help.cursor.total_reported" = "這是 Cursor 回傳的綜合額度進度，不等於已花金額占方案金額的比例；按量付費另列。";
+"metric.help.cursor.personal" = "這是 Cursor 回傳的個人實際按量付費金額。顯示預算只供 CodeUsage 計算進度，不會更改 Cursor 的消費上限。";
+"metric.help.cursor.personal_enterprise" = "這是 Cursor 回傳的個人消費金額。Enterprise 共享池可能包含方案內使用，不能直接視為超額付費；顯示預算僅供參考。";
+"metric.help.cursor.organization" = "這是 Cursor 回傳的組織共享用量與上限。共享池可能涵蓋合約期總用量，不能認定全部是額外付費，也不是你的個人額度。";
+"metric.help.cursor.team" = "這是整個團隊本期的消費總額與上限，不是你的個人額度；個人明細可能已包含在總額中，不能相加。";
+"metric.help.codex.window" = "這是 Codex 回傳的目前時間視窗額度進度。不同視窗分別計算，可用量也可能受個人上限與 Credits 餘額影響。";
+"metric.help.codex.individual_limit" = "這是服務端回傳的個人 Credits 使用上限，不是工作區共享餘額。";
+"metric.help.codex.workspace_credits" = "這是工作區共享 Credits 的剩餘量，可能供其他成員和支援的功能使用，不是個人專屬餘額。";
+"metric.help.claude.window" = "這是目前 Claude 帳號的額度視窗進度；Claude 與 Claude Code 共用額度，並非只統計 Claude Code。";
+"metric.help.qoder.included" = "這是 Qoder 回傳的目前帳號方案 Credits 進度。加購額度與組織共享資源包另列。";
+"metric.help.qoder.add_on" = "這是 Qoder 回傳的已購 Add-on Credits 進度，與方案額度分開統計。";
+"metric.help.qoder.shared" = "這是組織共享資源包的 Credits 進度，可能由多位成員共同使用，不是個人額度。";
+"metric.help.qoder.total" = "這是 Qoder 回傳的綜合使用百分比，僅在沒有分項額度時單獨顯示；它不是 Credits 數量。";
+"metric.help.kiro.credits" = "這是 Kiro 回傳的目前週期方案 Credits 進度。加購額度另列；達到 100% 不一定表示帳號已無可用額度。";
+"metric.help.kiro.add_on" = "這是尚未過期的已購 Add-on Credits 進度，與月度方案分開，不隨月度額度一同重置。";
 "deadline.expiration.days" = "%d 天後到期";
 "deadline.expiration.hours" = "%d 小時後到期";
 "deadline.expiration.imminent" = "即將到期";
@@ -180,8 +205,8 @@
 "本月我的用量" = "本月我的用量";
 
 "这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。" = "這是本計費週期方案內的總用量。按量付費用量會在下方另行顯示。";
-"这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。" = "這是使用 Auto（自動選擇模型）時產生的方案內用量。它不是獨立額度，請勿與總用量相加。";
-"这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。" = "這是手動選擇 Claude、GPT、Gemini 等模型時產生的方案內用量。這裡的「API」是 Cursor 的分類名稱，不是你自己的 API Key 用量。";
+"这是 Cursor 返回的 Auto 类别额度使用百分比，不等于你选择 Auto 的请求量或花费。Auto 可能路由到其他模型额度池；各项百分比不能相加。" = "這是 Cursor 回傳的 Auto 類別額度使用百分比，不等於你選擇 Auto 的請求量或花費。Auto 可能路由至其他模型額度池；各項百分比不能相加。";
+"这是 Cursor 返回的 API 类别额度使用百分比，并非只统计手动选择的模型；Auto 路由到第三方模型时也可能计入。这里的“API”不是你自己的 API Key。" = "這是 Cursor 回傳的 API 類別額度使用百分比，並非只統計手動選擇的模型；Auto 路由至第三方模型時也可能計入。這裡的「API」不是你自己的 API Key。";
 "这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。" = "這是本計費週期超出方案後產生的按量付費金額。顯示預算只用於計算進度，不會限制實際消費。";
 "这是整个组织本期的按量付费总额和上限，不是你的个人额度。" = "這是整個組織本期的按量付費總額和上限，不是你的個人額度。";
 "这是整个团队本期的按量付费总额和上限，不是你的个人额度。" = "這是整個團隊本期的按量付費總額和上限，不是你的個人額度。";
@@ -209,3 +234,6 @@
 "打开 Claude 桌面端" = "開啟 Claude 桌面版";
 "打开 Kiro IDE" = "開啟 Kiro IDE";
 "打开 Qoder IDE" = "開啟 Qoder IDE";
+"个人按量消费暂不可用；此处只显示团队或组织总消费。" = "個人隨用隨付費用暫時無法取得；此處僅顯示團隊或組織總費用。";
+"第三方模型（API）" = "第三方模型（API）";
+"这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。" = "這是第三方模型方案額度的進度；Auto 路由到第三方模型時也可能計入這裡。";

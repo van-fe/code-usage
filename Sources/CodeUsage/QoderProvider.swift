@@ -844,7 +844,7 @@ actor QoderProvider {
             if metrics.isEmpty {
                 metrics.append(UsageMetric(
                     id: "total",
-                    title: "总 Credits",
+                    title: "综合额度进度",
                     usedPercent: overall,
                     deadlineAt: expiry,
                     deadlineKind: .expiration

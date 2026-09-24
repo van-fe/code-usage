@@ -3,7 +3,32 @@
 "cloud.last_synced" = "마지막 동기화: %@";
 "cursor.budget.accessibility" = "표시 예산 편집, 현재 $%@";
 "cursor.budget.edit_help" = "현재 $%@의 표시 예산을 기준으로 진행률을 계산합니다. 클릭하여 수정할 수 있으며 Cursor의 실제 지출 한도는 변경되지 않습니다.";
-"cursor.help.personal_shared" = "이번 결제 기간의 개인 종량제 지출이며, ‘%@’와 별도로 표시됩니다. 표시 예산은 진행률 계산에만 사용됩니다.";
+"cursor.help.personal_shared" = "개인 사용 금액의 세부 내역이며 ‘%@’에 이미 포함될 수 있습니다. 두 금액을 더하지 마세요. 표시 예산은 CodeUsage의 진행률에만 영향을 줍니다.";
+
+"基础套餐额度" = "기본 플랜 한도";
+"其他模型（API）" = "기타 모델(API)";
+"综合额度进度" = "전체 한도 진행률";
+"Claude 账号的共用订阅额度" = "Claude 계정의 공유 구독 한도";
+"消费与共享额度" = "지출 및 공유 한도";
+"menu.provider_remaining_metric" = "%@ · %@ 남음 %d%%";
+"menu.cursor.reported_progress" = "Cursor · 전체 진행률 %d%% 사용(금액 잔액 아님)";
+"menu.cursor.personal_spend_limit_remaining" = "Cursor · 개인 지출 한도 %d%% 남음";
+"metric.help.cursor.total_base" = "개인의 기본 플랜 한도 사용률입니다. 추가 무료 사용량은 포함되지 않을 수 있으며 100%여도 종량제 요금이 시작된 것은 아닙니다.";
+"metric.help.cursor.total_reported" = "Cursor가 반환한 전체 한도 진행률이며 사용 금액을 플랜 가격으로 나눈 비율이 아닙니다. 종량제 지출은 별도로 표시됩니다.";
+"metric.help.cursor.personal" = "Cursor가 반환한 개인의 실제 종량제 지출입니다. 표시 예산은 CodeUsage의 진행률 계산에만 쓰이며 Cursor의 지출 한도는 바꾸지 않습니다.";
+"metric.help.cursor.personal_enterprise" = "Cursor가 반환한 개인 지출입니다. Enterprise 공유 풀에는 플랜 포함 사용량이 들어갈 수 있으므로 모두 초과 요금은 아닙니다. 표시 예산은 참고용입니다.";
+"metric.help.cursor.organization" = "Cursor가 반환한 조직의 공유 사용량과 한도입니다. 계약 기간의 총사용량이 포함될 수 있어 모두 추가 요금은 아니며 개인 한도도 아닙니다.";
+"metric.help.cursor.team" = "이번 기간의 팀 지출 합계와 한도이며 개인 한도가 아닙니다. 개인 내역이 합계에 포함될 수 있으므로 더하지 마세요.";
+"metric.help.codex.window" = "Codex가 반환한 현재 시간대의 한도 진행률입니다. 시간대별로 따로 계산되며 개인 한도와 Credits 잔액도 사용 가능 여부에 영향을 줍니다.";
+"metric.help.codex.individual_limit" = "서비스가 반환한 개인 Credits 사용 한도이며 작업 공간의 공유 잔액이 아닙니다.";
+"metric.help.codex.workspace_credits" = "작업 공간 공유 Credits의 잔액입니다. 다른 구성원과 지원 기능도 사용할 수 있으며 개인 전용 잔액이 아닙니다.";
+"metric.help.claude.window" = "현재 Claude 계정의 한도 진행률입니다. Claude와 Claude Code가 이 한도를 공유하며 Claude Code만의 사용량이 아닙니다.";
+"metric.help.qoder.included" = "Qoder가 반환한 현재 계정의 플랜 Credits 진행률입니다. 구매분과 조직 공유분은 별도로 표시됩니다.";
+"metric.help.qoder.add_on" = "Qoder가 반환한 구매 Add-on Credits 진행률이며 플랜 한도와 별도로 계산됩니다.";
+"metric.help.qoder.shared" = "조직 공유 Credits 패키지의 진행률입니다. 다른 구성원도 사용할 수 있으며 개인 한도가 아닙니다.";
+"metric.help.qoder.total" = "Qoder가 반환한 전체 사용률이며 세부 한도가 없을 때만 단독으로 표시됩니다. Credits 수량이 아닙니다.";
+"metric.help.kiro.credits" = "Kiro가 반환한 이번 주기의 플랜 Credits 진행률입니다. 구매분은 별도로 표시되며 100%여도 사용 가능량이 남을 수 있습니다.";
+"metric.help.kiro.add_on" = "만료되지 않은 구매 Add-on Credits의 진행률입니다. 월간 플랜과 별도이며 월간 한도와 함께 초기화되지 않습니다.";
 "deadline.expiration.days" = "%d일 후 만료";
 "deadline.expiration.hours" = "%d시간 후 만료";
 "deadline.expiration.imminent" = "곧 만료";
@@ -177,8 +202,8 @@
 "本月我的用量" = "이번 달 내 사용량";
 
 "这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。" = "현재 결제 기간의 플랜 포함 총 사용량입니다. 종량제 사용량은 아래에 별도로 표시됩니다.";
-"这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。" = "Auto(모델 자동 선택)를 사용할 때 발생한 플랜 포함 사용량입니다. 별도의 사용 한도가 아니므로 총 사용량에 더하지 마세요.";
-"这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。" = "Claude, GPT, Gemini 등의 모델을 직접 선택할 때 발생한 플랜 포함 사용량입니다. 여기서 ‘API’는 Cursor의 분류명이며, 사용자의 API 키로 발생한 사용량이 아닙니다.";
+"这是 Cursor 返回的 Auto 类别额度使用百分比，不等于你选择 Auto 的请求量或花费。Auto 可能路由到其他模型额度池；各项百分比不能相加。" = "Cursor가 반환한 Auto 범주 한도의 사용률로, Auto를 선택한 요청 수나 비용을 뜻하지 않습니다. Auto는 다른 모델 한도에 배정될 수 있으며 각 비율을 더할 수 없습니다.";
+"这是 Cursor 返回的 API 类别额度使用百分比，并非只统计手动选择的模型；Auto 路由到第三方模型时也可能计入。这里的“API”不是你自己的 API Key。" = "Cursor가 반환한 API 범주 한도의 사용률로, 직접 선택한 모델만 집계한 값이 아닙니다. Auto가 타사 모델에 배정된 사용량도 포함될 수 있습니다. 여기서 API는 사용자의 API 키를 뜻하지 않습니다.";
 "这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。" = "현재 결제 기간에 플랜 한도를 초과해 발생한 종량제 지출입니다. 표시 예산은 진행률 계산에만 사용되며 실제 지출을 제한하지 않습니다.";
 "这是整个组织本期的按量付费总额和上限，不是你的个人额度。" = "전체 조직의 이번 기간 종량제 지출 총액과 한도이며, 개인 사용 한도가 아닙니다.";
 "这是整个团队本期的按量付费总额和上限，不是你的个人额度。" = "전체 팀의 이번 기간 종량제 지출 총액과 한도이며, 개인 사용 한도가 아닙니다.";
@@ -196,3 +221,6 @@
 "在终端启动 Claude Code" = "터미널에서 Claude Code 실행";
 "在终端启动 Kiro CLI" = "터미널에서 Kiro CLI 실행";
 "在终端启动 Qoder CLI" = "터미널에서 Qoder CLI 실행";
+"个人按量消费暂不可用；此处只显示团队或组织总消费。" = "개인 종량제 사용 금액을 확인할 수 없습니다. 여기에는 팀 또는 조직의 총액만 표시됩니다.";
+"第三方模型（API）" = "타사 모델(API)";
+"这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。" = "타사 모델의 플랜 포함 사용량입니다. Auto가 타사 모델로 라우팅한 요청도 포함될 수 있습니다.";

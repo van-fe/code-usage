@@ -3,7 +3,32 @@
 "cloud.last_synced" = "Dernière synchronisation à %@.";
 "cursor.budget.accessibility" = "Modifier le budget d’affichage, actuellement $%@";
 "cursor.budget.edit_help" = "La progression est calculée avec un budget d’affichage de $%@. Cliquez pour le modifier. Cela ne change pas la limite de dépenses Cursor.";
-"cursor.help.personal_shared" = "Il s’agit de vos dépenses personnelles à la demande pour cette période, affichées séparément de « %@ ». Le budget d’affichage sert uniquement à calculer la progression.";
+"cursor.help.personal_shared" = "Ce sont vos dépenses personnelles, qui peuvent déjà être comprises dans « %@ ». N’additionnez pas les deux montants. Le budget affiché ne modifie que la progression dans CodeUsage.";
+
+"基础套餐额度" = "Quota de base du forfait";
+"其他模型（API）" = "Autres modèles (API)";
+"综合额度进度" = "Progression globale du quota";
+"Claude 账号的共用订阅额度" = "Quota partagé du compte Claude";
+"消费与共享额度" = "Dépenses et quota partagé";
+"menu.provider_remaining_metric" = "%@ · %@ restant %d%%";
+"menu.cursor.reported_progress" = "Cursor · progression globale %d%% utilisée (pas un solde)";
+"menu.cursor.personal_spend_limit_remaining" = "Cursor · limite de dépenses personnelles : %d%% restants";
+"metric.help.cursor.total_base" = "C’est la progression du quota de base personnel. Une éventuelle utilisation bonus n’y figure pas ; 100 % ne signifie pas que la facturation à l’usage a commencé.";
+"metric.help.cursor.total_reported" = "C’est la progression globale renvoyée par Cursor, pas les dépenses divisées par le prix du forfait. Les dépenses à l’usage sont affichées séparément.";
+"metric.help.cursor.personal" = "Ce sont vos dépenses réelles à l’usage renvoyées par Cursor. Le budget affiché calcule seulement la progression dans CodeUsage et ne change pas la limite Cursor.";
+"metric.help.cursor.personal_enterprise" = "Ce sont les dépenses personnelles renvoyées par Cursor. Un pool Enterprise partagé peut inclure l’utilisation couverte par le forfait ; il ne s’agit pas forcément de dépassement. Le budget affiché est indicatif.";
+"metric.help.cursor.organization" = "Ce sont l’utilisation partagée et sa limite renvoyées par Cursor pour l’organisation. Le pool peut couvrir toute la durée du contrat, et pas seulement les frais supplémentaires ; ce n’est pas votre quota personnel.";
+"metric.help.cursor.team" = "Ce sont les dépenses et la limite de l’équipe pour cette période, pas votre quota personnel. Vos dépenses peuvent déjà figurer dans le total ; ne les additionnez pas.";
+"metric.help.codex.window" = "C’est la progression d’utilisation Codex pour cette période. Chaque période est comptée séparément ; les limites personnelles et les Credits peuvent aussi jouer sur la disponibilité.";
+"metric.help.codex.individual_limit" = "C’est la limite personnelle d’utilisation des Credits renvoyée par le service, pas le solde partagé de l’espace de travail.";
+"metric.help.codex.workspace_credits" = "Ce sont les Credits partagés restants de l’espace de travail. D’autres membres et fonctions compatibles peuvent les utiliser ; ce n’est pas un solde personnel.";
+"metric.help.claude.window" = "C’est la progression du quota du compte Claude actuel. Claude et Claude Code partagent ces limites ; il ne s’agit pas uniquement de Claude Code.";
+"metric.help.qoder.included" = "C’est la progression des Credits du forfait de ce compte renvoyée par Qoder. Les quotas achetés et partagés par l’organisation sont affichés séparément.";
+"metric.help.qoder.add_on" = "C’est la progression des Add-on Credits achetés renvoyée par Qoder, distincte du quota du forfait.";
+"metric.help.qoder.shared" = "C’est la progression du paquet de Credits partagé par l’organisation. D’autres membres peuvent l’utiliser ; ce n’est pas un quota personnel.";
+"metric.help.qoder.total" = "C’est le pourcentage global renvoyé par Qoder, affiché seul lorsque les détails manquent. Ce n’est pas un nombre de Credits.";
+"metric.help.kiro.credits" = "C’est la progression des Credits du forfait Kiro pour ce cycle. Les Credits achetés sont distincts ; 100 % ne signifie pas toujours qu’il ne reste plus de quota.";
+"metric.help.kiro.add_on" = "C’est la progression des Add-on Credits achetés et non expirés. Ils sont distincts du forfait mensuel et ne sont pas réinitialisés avec lui.";
 "deadline.expiration.days" = "Expire dans %d jours";
 "deadline.expiration.hours" = "Expire dans %d heures";
 "deadline.expiration.imminent" = "Expiration imminente";
@@ -179,8 +204,8 @@
 "本月我的用量" = "Mon utilisation ce mois-ci";
 
 "这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。" = "Il s’agit de l’utilisation totale incluse dans le forfait pour la période de facturation en cours. L’utilisation à la demande est affichée séparément ci-dessous.";
-"这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。" = "Il s’agit de l’utilisation incluse générée avec Auto (sélection automatique du modèle). Ce n’est pas un quota distinct et elle ne doit pas être ajoutée à l’utilisation totale.";
-"这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。" = "Il s’agit de l’utilisation incluse générée en sélectionnant manuellement des modèles comme Claude, GPT ou Gemini. Ici, « API » est le nom d’une catégorie Cursor, et non l’utilisation de votre propre clé API.";
+"这是 Cursor 返回的 Auto 类别额度使用百分比，不等于你选择 Auto 的请求量或花费。Auto 可能路由到其他模型额度池；各项百分比不能相加。" = "C’est le pourcentage d’utilisation du quota Auto renvoyé par Cursor, pas le nombre ni le coût des requêtes effectuées avec Auto. Auto peut utiliser d’autres quotas de modèles ; ces pourcentages ne s’additionnent pas.";
+"这是 Cursor 返回的 API 类别额度使用百分比，并非只统计手动选择的模型；Auto 路由到第三方模型时也可能计入。这里的“API”不是你自己的 API Key。" = "C’est le pourcentage d’utilisation du quota API renvoyé par Cursor, pas seulement celui des modèles choisis manuellement. Les requêtes Auto dirigées vers des modèles tiers peuvent aussi compter. API ne désigne pas votre propre clé API.";
 "这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。" = "Il s’agit des dépenses à la demande engagées au-delà du forfait pendant la période de facturation en cours. Le budget d’affichage sert uniquement à calculer la progression et ne limite pas les dépenses réelles.";
 "这是整个组织本期的按量付费总额和上限，不是你的个人额度。" = "Il s’agit du total et de la limite des dépenses à la demande de toute l’organisation pour la période en cours, et non de votre quota personnel.";
 "这是整个团队本期的按量付费总额和上限，不是你的个人额度。" = "Il s’agit du total et de la limite des dépenses à la demande de toute l’équipe pour la période en cours, et non de votre quota personnel.";
@@ -212,3 +237,6 @@
 "Claude Code 登录已过期，请运行 claude 重新登录" = "La session Claude Code a expiré. Exécutez claude pour vous reconnecter";
 "Kiro 尚未登录" = "Kiro n’est pas connecté";
 "Qoder IDE 当前未运行，请打开 Qoder IDE 后重试" = "Qoder IDE n’est pas en cours d’exécution. Ouvrez-le et réessayez";
+"个人按量消费暂不可用；此处只显示团队或组织总消费。" = "Les dépenses personnelles à la demande sont indisponibles ; seul le total de l’équipe ou de l’organisation est affiché ici.";
+"第三方模型（API）" = "Modèles tiers (API)";
+"这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。" = "Ceci indique l'utilisation incluse des modèles tiers. Les requêtes Auto dirigées vers ces modèles peuvent aussi y être comptées.";
