@@ -202,7 +202,7 @@ actor ClaudeCodeProvider {
             planName: planName,
             metrics: metrics,
             fetchedAt: now,
-            note: "来自 Claude Code 当前订阅额度",
+            note: "Claude 账号的共用订阅额度",
             subscriptionCategory: .inferred(from: planName)
         )
     }

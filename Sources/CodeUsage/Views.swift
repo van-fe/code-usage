@@ -2,7 +2,6 @@ import AppKit
 import CodeUsageDisplay
 import SwiftUI
 
-private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
 
 struct DashboardView: View {
     @ObservedObject var store: UsageStore
@@ -390,10 +389,10 @@ struct DashboardView: View {
                     .font(.system(size: 10, weight: .medium))
                     .frame(width: 12, height: 12)
             }
-            .menuStyle(.button)
-            .buttonStyle(CompactIconButtonStyle())
+            .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
+            .modifier(CompactMenuHoverStyle())
             .help(settingsMenuHelp)
             .accessibilityLabel("设置与链接")
 
@@ -636,10 +635,10 @@ private struct ProviderCard: View {
                         .frame(width: 12, height: 12)
                         .foregroundStyle(.secondary)
                 }
-                .menuStyle(.button)
-                .buttonStyle(CompactIconButtonStyle())
+                .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
+                .modifier(CompactMenuHoverStyle())
                 .help("更多操作")
                 .accessibilityLabel(L10n.format("provider.more_actions", provider.title))
                 if state.isStale {
@@ -877,7 +876,6 @@ private struct ProviderCard: View {
 
     private struct SharedMetricTimeline: Equatable {
         let deadline: String
-        let suggestedPercent: Int?
     }
 
     private func sharedTimeline(for metrics: [UsageMetric]) -> SharedMetricTimeline? {
@@ -890,22 +888,7 @@ private struct ProviderCard: View {
               deadlines.dropFirst().allSatisfy({ $0 == deadline })
         else { return nil }
 
-        let suggestions = progressMetrics.compactMap {
-            $0.suggestedUsedPercent().map { Int($0.rounded()) }
-        }
-        let suggestedPercent: Int?
-        if suggestions.count == progressMetrics.count,
-           let suggested = suggestions.first,
-           suggestions.dropFirst().allSatisfy({ $0 == suggested }) {
-            suggestedPercent = suggested
-        } else {
-            suggestedPercent = nil
-        }
-
-        return SharedMetricTimeline(
-            deadline: deadline,
-            suggestedPercent: suggestedPercent
-        )
+        return SharedMetricTimeline(deadline: deadline)
     }
 
     private func metricGroupHeader(
@@ -923,16 +906,8 @@ private struct ProviderCard: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 if let timeline {
-                    HStack(spacing: 3) {
-                        Text(timeline.deadline)
-                            .foregroundStyle(.secondary)
-                        if let suggested = timeline.suggestedPercent {
-                            Text("·")
-                                .foregroundStyle(.secondary)
-                            Text(L10n.format("usage.suggested_percent", suggested))
-                                .foregroundStyle(suggestedUsageColor)
-                        }
-                    }
+                    Text(timeline.deadline)
+                        .foregroundStyle(.secondary)
                     .font(.system(size: 9, weight: .medium))
                     .monospacedDigit()
                 }
@@ -953,14 +928,13 @@ private struct ProviderCard: View {
         _ metric: UsageMetric,
         showsInlineTimeline: Bool
     ) -> some View {
-        let suggested = metric.showsProgress ? metric.suggestedUsedPercent() : nil
         let isCursorSummary = provider == .cursor && metric.id == "total"
         let isCursorDetail = provider == .cursor && ["auto", "api"].contains(metric.id)
         return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 HStack(spacing: 4) {
                     Text(L10n.userFacing(metric.title))
-                    if let help = cursorMetricHelp(metric) {
+                    if let help = metricHelp(metric) {
                         MetricHelpIcon(
                             text: help,
                             accessibilityLabel: L10n.format(
@@ -1014,26 +988,11 @@ private struct ProviderCard: View {
                 HStack(spacing: 7) {
                     UsageProgressBar(
                         usedPercent: metric.clampedPercent,
-                        suggestedPercent: suggested,
                         fillColor: progressColor(metric.clampedPercent)
                     )
-                    if showsInlineTimeline, let suggested {
-                        HStack(spacing: 3) {
-                            Circle()
-                                .fill(suggestedUsageColor)
-                                .frame(width: 4, height: 4)
-                            Text(L10n.format(
-                                "usage.suggested_percent",
-                                Int(suggested.rounded())
-                            ))
-                        }
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(suggestedUsageColor)
-                        .fixedSize()
-                    }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(progressAccessibilityLabel(metric, suggested: suggested))
+                .accessibilityLabel(progressAccessibilityLabel(metric))
                 if let valueText = metricValueText(metric) {
                     Text(valueText)
                         .font(.system(size: 9, weight: .medium))
@@ -1045,30 +1004,62 @@ private struct ProviderCard: View {
         .padding(.leading, isCursorDetail ? 8 : 0)
     }
 
-    private func progressAccessibilityLabel(_ metric: UsageMetric, suggested: Double?) -> String {
-        var value = L10n.format(
+    private func progressAccessibilityLabel(_ metric: UsageMetric) -> String {
+        L10n.format(
             "usage.accessibility_used_percent",
             Int(metric.clampedPercent.rounded())
         )
-        if let suggested {
-            value += L10n.format(
-                "usage.accessibility_suggested_percent",
-                Int(suggested.rounded())
-            )
+    }
+
+    private func metricHelp(_ metric: UsageMetric) -> String? {
+        switch provider {
+        case .codex:
+            switch metric.id {
+            case "individual_limit": return L10n.text("metric.help.codex.individual_limit")
+            case "workspace_credits": return L10n.text("metric.help.codex.workspace_credits")
+            default:
+                return metric.group == .included
+                    ? L10n.text("metric.help.codex.window") : nil
+            }
+        case .cursor:
+            return cursorMetricHelp(metric)
+        case .claude:
+            return ["weekly", "session"].contains(metric.id)
+                ? L10n.text("metric.help.claude.window") : nil
+        case .qoder:
+            switch metric.id {
+            case "included": return L10n.text("metric.help.qoder.included")
+            case "add_on": return L10n.text("metric.help.qoder.add_on")
+            case "shared": return L10n.text("metric.help.qoder.shared")
+            case "total": return L10n.text("metric.help.qoder.total")
+            default: return nil
+            }
+        case .kiro:
+            switch metric.id {
+            case "credits": return L10n.text("metric.help.kiro.credits")
+            case "add_on": return L10n.text("metric.help.kiro.add_on")
+            default: return nil
+            }
         }
-        return value
     }
 
     private func cursorMetricHelp(_ metric: UsageMetric) -> String? {
-        guard provider == .cursor else { return nil }
         switch metric.id {
         case "total":
-            return L10n.text("这是本计费周期套餐内的整体用量。按量付费会在下方单独显示。")
+            return L10n.text(metric.value == nil
+                ? "metric.help.cursor.total_reported"
+                : "metric.help.cursor.total_base")
         case "auto":
-            return L10n.text("这是使用 Auto（自动选择模型）时产生的套餐内用量。它不是一份独立额度，不要和总用量相加。")
+            return L10n.text("这是 Cursor 返回的 Auto 类别额度使用百分比，不等于你选择 Auto 的请求量或花费。Auto 可能路由到其他模型额度池；各项百分比不能相加。")
         case "api":
-            return L10n.text("这是手动选择 Claude、GPT、Gemini 等模型时产生的套餐内用量。这里的“API”是 Cursor 的分类名，不是你自己的 API Key 消费。")
+            if metric.title == "第三方模型（API）" {
+                return L10n.text("这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。")
+            }
+            return L10n.text("这是 Cursor 返回的 API 类别额度使用百分比，并非只统计手动选择的模型；Auto 路由到第三方模型时也可能计入。这里的“API”不是你自己的 API Key。")
         case "on_demand_personal":
+            if cursorSubscriptionCategory == .enterprise {
+                return L10n.text("metric.help.cursor.personal_enterprise")
+            }
             if cursorSubscriptionCategory.hasSharedOrganizationContext {
                 let sharedName = L10n.text(
                     cursorSubscriptionCategory == .enterprise
@@ -1077,12 +1068,12 @@ private struct ProviderCard: View {
                 )
                 return L10n.format("cursor.help.personal_shared", sharedName)
             }
-            return L10n.text("这是本计费周期超出套餐后产生的按量付费金额。显示预算只用于计算进度，不会限制实际消费。")
+            return L10n.text("metric.help.cursor.personal")
         case "on_demand_team":
             if cursorSubscriptionCategory == .enterprise {
-                return L10n.text("这是整个组织本期的按量付费总额和上限，不是你的个人额度。")
+                return L10n.text("metric.help.cursor.organization")
             }
-            return L10n.text("这是整个团队本期的按量付费总额和上限，不是你的个人额度。")
+            return L10n.text("metric.help.cursor.team")
         default:
             return nil
         }
@@ -1199,7 +1190,6 @@ private struct ProviderCard: View {
 
 private struct UsageProgressBar: View {
     let usedPercent: Double
-    let suggestedPercent: Double?
     let fillColor: Color
 
     var body: some View {
@@ -1212,22 +1202,12 @@ private struct UsageProgressBar: View {
                 Capsule()
                     .fill(fillColor)
                     .frame(width: width * usedPercent / 100, height: 6)
-                if let suggestedPercent {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(suggestedUsageColor)
-                        .frame(width: 2, height: 10)
-                        .offset(x: markerOffset(width: width, percent: suggestedPercent))
-                }
             }
             .frame(maxHeight: .infinity, alignment: .center)
         }
         .frame(height: 10)
     }
 
-    private func markerOffset(width: CGFloat, percent: Double) -> CGFloat {
-        let center = width * min(max(percent, 0), 100) / 100
-        return min(max(center - 1, 0), max(width - 2, 0))
-    }
 }
 
 struct CompactActionButtonStyle: ButtonStyle {
@@ -1239,6 +1219,29 @@ struct CompactActionButtonStyle: ButtonStyle {
 struct CompactIconButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CompactIconButtonBody(configuration: configuration)
+    }
+}
+
+private struct CompactMenuHoverStyle: ViewModifier {
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .padding(4)
+            .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isHovering ? Color.primary.opacity(0.08) : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(
+                        isHovering ? Color.primary.opacity(0.1) : .clear,
+                        lineWidth: 0.7
+                    )
+            )
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+            .onHover { isHovering = $0 }
     }
 }
 

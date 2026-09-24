@@ -326,9 +326,26 @@ final class UsageStore: ObservableObject {
                     ? L10n.format("menu.updating", provider.title)
                     : L10n.format("menu.no_data", provider.title)
             }
+            if provider == .cursor, metric.id == "on_demand_personal" {
+                return L10n.format(
+                    metric.allowsLimitEditing
+                        ? "menu.cursor.personal_budget_remaining"
+                        : (snapshot?.subscriptionCategory == .enterprise
+                            ? "menu.cursor.personal_spend_limit_remaining"
+                            : "menu.cursor.personal_limit_remaining"),
+                    Int(metric.remainingPercent.rounded())
+                )
+            }
+            if provider == .cursor, metric.id == "total", metric.value == nil {
+                return L10n.format(
+                    "menu.cursor.reported_progress",
+                    Int(metric.clampedPercent.rounded())
+                )
+            }
             return L10n.format(
-                "menu.provider_remaining",
+                "menu.provider_remaining_metric",
                 provider.title,
+                L10n.userFacing(metric.title),
                 Int(metric.remainingPercent.rounded())
             )
         }.joined(separator: " · ")
@@ -380,9 +397,7 @@ final class UsageStore: ObservableObject {
                             provider: provider,
                             snapshot: snapshot
                         ),
-                        suggestedUsedPercent: metric.showsProgress
-                            ? metric.suggestedUsedPercent()
-                            : nil,
+                        suggestedUsedPercent: nil,
                         showsProgress: metric.showsProgress,
                         isPrimary: metric.id == primaryMetric?.id
                     )

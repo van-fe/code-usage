@@ -487,6 +487,8 @@ struct UsageMetric: Identifiable, Equatable, Sendable {
     }
 
     func suggestedUsedPercent(at date: Date = Date()) -> Double? {
+        // The team spend cap is a safety limit, not a monthly usage target.
+        guard id != "on_demand_team" else { return nil }
         guard let deadlineAt, let windowDuration, windowDuration > 0 else { return nil }
         let remaining = deadlineAt.timeIntervalSince(date)
         if remaining > windowDuration { return 0 }

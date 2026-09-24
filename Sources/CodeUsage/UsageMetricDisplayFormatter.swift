@@ -39,7 +39,10 @@ enum UsageMetricDisplayFormatter {
         case .enterprise:
             switch group {
             case .included: return L10n.text("我的套餐额度")
-            case .onDemand: return L10n.text("按量计费")
+            case .onDemand:
+                return provider == .cursor
+                    ? L10n.text("消费与共享额度")
+                    : L10n.text("按量计费")
             case .credits: return L10n.text("组织共享额度")
             case .personalAddOn: return L10n.text("个人加购额度")
             case .organizationShared: return L10n.text("组织共享额度")

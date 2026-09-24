@@ -106,6 +106,7 @@ done
 WIDGET_CONST_PROTOCOLS_FILE="$BUILD_DIR/CodeUsageWidgets_const_extract_protocols.json"
 WIDGET_CONST_VALUES_FILE="$BUILD_DIR/CodeUsageWidgets.swiftconstvalues"
 WIDGET_CONST_VALUES_LIST="$BUILD_DIR/CodeUsageWidgets.constvalues.list"
+WIDGET_SOURCE_FILES_LIST="$BUILD_DIR/CodeUsageWidgets.sources.list"
 WIDGET_METADATA_OBJECT="$BUILD_DIR/CodeUsageWidgets.o"
 SELECTED_DEVELOPER_PATH="$(xcode-select -p)"
 SELECTED_SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
@@ -116,6 +117,8 @@ WIDGET_TARGET_TRIPLE="$NATIVE_BUILD_ARCH-apple-macosx14.0"
 print -r -- '["AppIntent","EntityQuery","AppEntity","TransientEntity","AppEnum","AppShortcutProviding","AppShortcutsProvider","AnyResolverProviding","AppIntentsPackage","DynamicOptionsProvider"]' \
   > "$WIDGET_CONST_PROTOCOLS_FILE"
 print -r -- "$WIDGET_CONST_VALUES_FILE" > "$WIDGET_CONST_VALUES_LIST"
+print -r -- "$PROJECT_DIR/Sources/CodeUsageWidgets/CodeUsageWidgets.swift" \
+  > "$WIDGET_SOURCE_FILES_LIST"
 
 xcrun --sdk macosx swiftc \
   -module-cache-path "$MODULE_CACHE_DIR" \
@@ -124,7 +127,8 @@ xcrun --sdk macosx swiftc \
   -swift-version 5 \
   -target "$WIDGET_TARGET_TRIPLE" \
   -sdk "$SELECTED_SDK_PATH" \
-  -I "$BUILD_DIR/release/Modules" \
+  -I "$BUILD_DIR/release" \
+  -I "$BUILD_DIR/$NATIVE_BUILD_ARCH-apple-macosx/release/Modules" \
   -emit-object \
   -emit-const-values \
   -Xfrontend -const-gather-protocols-file \
@@ -142,7 +146,7 @@ xcrun appintentsmetadataprocessor \
   --platform-family macOS \
   --deployment-target 14.0 \
   --target-triple "$WIDGET_TARGET_TRIPLE" \
-  --source-file-list "$BUILD_DIR/release/CodeUsageWidgets.build/sources" \
+  --source-file-list "$WIDGET_SOURCE_FILES_LIST" \
   --swift-const-vals-list "$WIDGET_CONST_VALUES_LIST" \
   --force
 

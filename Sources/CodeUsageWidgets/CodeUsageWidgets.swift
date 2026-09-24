@@ -20,14 +20,16 @@ struct UsageMetricOptionsProvider: DynamicOptionsProvider {
                 let items: [IntentItem<String>] = provider.displayMetrics.map { metric in
                     IntentItem<String>(
                         metricIdentifier(providerID: provider.id, metricID: metric.id),
-                        title: "\(provider.title) · \(metric.title)",
-                        subtitle: metric.groupTitle.map { "\($0)" }
+                        title: "\(metric.title)"
                     )
                 }
                 guard !items.isEmpty else { return nil }
                 return IntentItemSection<String>("\(provider.title)", items: items)
             }
-        return IntentItemCollection(sections: sections)
+        return IntentItemCollection(
+            promptLabel: "选择要显示的指标",
+            sections: sections
+        )
     }
 }
 
@@ -145,6 +147,7 @@ private struct ConfigurableUsageWidget: Widget {
         .configurationDisplayName("CodeUsage 用量")
         .description("小号和中号可自选指标，大号显示全部用量。")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
@@ -251,13 +254,14 @@ private struct BriefWidgetView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 if let usedPercent = item.metric.usedPercent {
-                    Text(WidgetLocalization.format(
-                        "usage.used_percent",
-                        Int(usedPercent.rounded())
-                    ))
+                    Text("\(Int(usedPercent.rounded()))%")
                         .font(.system(size: 27, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(progressColor(for: usedPercent))
+                        .accessibilityLabel(WidgetLocalization.format(
+                            "usage.used_percent",
+                            Int(usedPercent.rounded())
+                        ))
                     ProgressView(value: usedPercent, total: 100)
                         .progressViewStyle(.linear)
                         .tint(progressColor(for: usedPercent))
@@ -272,6 +276,8 @@ private struct BriefWidgetView: View {
                 WidgetEmptyState()
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .codeUsageWidgetBackground()
     }
@@ -291,6 +297,7 @@ private struct ModerateWidgetView: View {
         VStack(alignment: .leading, spacing: 7) {
             MetricSummaryList(items: items)
         }
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .codeUsageWidgetBackground()
     }
@@ -354,6 +361,7 @@ private struct FullWidgetView: View {
                 }
             }
         }
+        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .codeUsageWidgetBackground()
     }
