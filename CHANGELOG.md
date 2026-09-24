@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/van-fe/code-usage/compare/v0.12.0...v0.12.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* correct usage billing and widget layout ([#8](https://github.com/van-fe/code-usage/issues/8)) ([6418abc](https://github.com/van-fe/code-usage/commit/6418abca7be7739a07982a1be676855969c2dd3f))
+
 ## [0.12.0](https://github.com/van-fe/code-usage/compare/v0.11.2...v0.12.0) (2026-09-11)
 
 
