@@ -397,7 +397,9 @@ final class UsageStore: ObservableObject {
                             provider: provider,
                             snapshot: snapshot
                         ),
-                        suggestedUsedPercent: nil,
+                        suggestedUsedPercent: metric.showsProgress
+                            ? metric.suggestedUsedPercent()
+                            : nil,
                         showsProgress: metric.showsProgress,
                         isPrimary: metric.id == primaryMetric?.id
                     )
