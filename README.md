@@ -12,6 +12,21 @@ Project homepage: <https://github.com/van-fe/code-usage>
 
 > CodeUsage is an unofficial third-party tool and is not affiliated with or endorsed by OpenAI, Cursor, Anthropic, AWS, Kiro, or Qoder. All names and marks belong to their respective owners.
 
+## Screenshots
+
+The screenshots below use illustrative usage figures and spending amounts.
+
+<table>
+  <tr>
+    <th>Personal usage</th>
+    <th>Team spending breakdown</th>
+  </tr>
+  <tr>
+    <td><img src="Assets/Screenshots/individual-plan-en.png" width="340" alt="CodeUsage personal plan panel showing Codex, Cursor, and Claude Code quotas, reset times, and spending"></td>
+    <td><img src="Assets/Screenshots/team-spending-en.png" width="340" alt="CodeUsage team panel showing personal Cursor spending separately from the team total, alongside Claude Code and Kiro usage"></td>
+  </tr>
+</table>
+
 ## Features
 
 - Show usage in the menu bar with Brief, Moderate, and Full display modes, plus independent visibility controls for each tool.

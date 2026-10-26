@@ -12,6 +12,21 @@ CodeUsage 是一款轻量、原生的 macOS 菜单栏应用，用一个面板集
 
 > CodeUsage 是非官方第三方工具，与 OpenAI、Cursor、Anthropic、AWS、Kiro 或 Qoder 没有隶属或背书关系。各名称与标识归其权利人所有。
 
+## 应用截图
+
+以下界面中的用量与消费金额均为示例数据。
+
+<table>
+  <tr>
+    <th>个人用量总览</th>
+    <th>团队消费明细</th>
+  </tr>
+  <tr>
+    <td><img src="Assets/Screenshots/individual-plan-zh-CN.png" width="340" alt="CodeUsage 个人套餐面板，展示 Codex、Cursor、Claude Code 的额度进度、重置时间和消费金额"></td>
+    <td><img src="Assets/Screenshots/team-spending-zh-CN.png" width="340" alt="CodeUsage 团队面板，分别展示 Cursor 个人消费与团队总消费，以及 Claude Code 和 Kiro 用量"></td>
+  </tr>
+</table>
+
 ## 功能
 
 - 每六小时自动检查应用更新，后台下载并验证签名，退出时安装；也可手动检查、立即安装并重启，自动检查和安装均可在设置中关闭。
