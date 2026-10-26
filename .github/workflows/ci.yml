@@ -33,6 +33,9 @@ jobs:
       - name: Verify app signature
         run: /usr/bin/codesign --verify --deep --strict dist/CodeUsage.app
 
+      - name: Test app update settings and signed feeds
+        run: ./Scripts/test_updates.sh
+
       - name: Build designed CI DMG
         run: ./Scripts/package_dmg.sh
 

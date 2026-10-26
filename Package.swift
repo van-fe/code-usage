@@ -8,19 +8,26 @@ let package = Package(
         .executable(name: "CodeUsage", targets: ["CodeUsage"]),
         .executable(name: "CodeUsageWidgets", targets: ["CodeUsageWidgets"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.1")
+    ],
     targets: [
         .target(
             name: "CodeUsageDisplay"
         ),
         .executableTarget(
             name: "CodeUsage",
-            dependencies: ["CodeUsageDisplay"],
+            dependencies: [
+                "CodeUsageDisplay",
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             resources: [
                 .copy("Resources")
             ],
             linkerSettings: [
                 .linkedFramework("CloudKit"),
-                .linkedFramework("Security")
+                .linkedFramework("Security"),
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
         .executableTarget(

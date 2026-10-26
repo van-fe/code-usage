@@ -63,10 +63,18 @@ mkdir -p "$PROJECT_DIR/dist"
 rm -rf "$APP_DIR"
 mkdir -p \
   "$CONTENTS_DIR/MacOS" \
+  "$CONTENTS_DIR/Frameworks" \
   "$CONTENTS_DIR/Resources" \
   "$WIDGET_CONTENTS_DIR/MacOS" \
   "$WIDGET_CONTENTS_DIR/Resources"
 cp "$BUILD_DIR/release/CodeUsage" "$CONTENTS_DIR/MacOS/CodeUsage"
+SPARKLE_FRAMEWORK="$BUILD_DIR/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+if [[ ! -d "$SPARKLE_FRAMEWORK" ]]; then
+  echo "Missing Sparkle framework: $SPARKLE_FRAMEWORK" >&2
+  exit 1
+fi
+# ditto preserves the framework's symlinks and executable helper permissions.
+/usr/bin/ditto "$SPARKLE_FRAMEWORK" "$CONTENTS_DIR/Frameworks/Sparkle.framework"
 cp "$BUILD_DIR/release/CodeUsageWidgets" \
   "$WIDGET_CONTENTS_DIR/MacOS/CodeUsageWidgets"
 "$PROJECT_DIR/Scripts/verify_widget_entrypoint.sh" \
@@ -74,6 +82,7 @@ cp "$BUILD_DIR/release/CodeUsageWidgets" \
 cp "$PROJECT_DIR/LICENSE" "$CONTENTS_DIR/Resources/LICENSE"
 cp "$PROJECT_DIR/README.md" "$CONTENTS_DIR/Resources/README.md"
 cp "$PROJECT_DIR/THIRD_PARTY_NOTICES.md" "$CONTENTS_DIR/Resources/THIRD_PARTY_NOTICES.md"
+cp "$PROJECT_DIR/Config/Sparkle-LICENSE" "$CONTENTS_DIR/Resources/Sparkle-LICENSE.txt"
 cp "$PROJECT_DIR/Assets/provider-codex.svg" "$CONTENTS_DIR/Resources/provider-codex.svg"
 cp "$PROJECT_DIR/Assets/provider-cursor.svg" "$CONTENTS_DIR/Resources/provider-cursor.svg"
 cp "$PROJECT_DIR/Assets/provider-claude.svg" "$CONTENTS_DIR/Resources/provider-claude.svg"
@@ -178,6 +187,8 @@ plutil -insert CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist
 plutil -insert LSMinimumSystemVersion -string 13.0 "$CONTENTS_DIR/Info.plist"
 plutil -insert LSUIElement -bool true "$CONTENTS_DIR/Info.plist"
 plutil -insert NSHighResolutionCapable -bool true "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Merge '$PROJECT_DIR/Config/Updates.plist'" \
+  "$CONTENTS_DIR/Info.plist"
 plutil -insert CFBundleURLTypes -json \
   '[{"CFBundleURLName":"com.van-fe.CodeUsage","CFBundleURLSchemes":["codeusage"]}]' \
   "$CONTENTS_DIR/Info.plist"
@@ -229,6 +240,8 @@ codesign \
   --sign - \
   --entitlements "$PROJECT_DIR/Config/CodeUsageWidgetsLocal.entitlements" \
   "$WIDGET_DIR"
+"$PROJECT_DIR/Scripts/sign_sparkle.sh" "$APP_DIR" -
 codesign --force --sign - "$APP_DIR"
 codesign --verify --deep --strict "$APP_DIR"
+"$PROJECT_DIR/Scripts/verify_updates.sh" "$APP_DIR"
 echo "$APP_DIR"

@@ -185,9 +185,11 @@ LOCAL_APP="$PROJECT_DIR/dist-universal/CodeUsage.app"
 LOCAL_DMG="$PROJECT_DIR/dist/CodeUsage-$VERSION-macos-universal.dmg"
 LOCAL_ZIP="$OUTPUT_DIR/CodeUsage-$VERSION-macos-universal.zip"
 LOCAL_SOURCE="$OUTPUT_DIR/CodeUsage-$VERSION-source.zip"
+LOCAL_APPCAST="$OUTPUT_DIR/appcast.xml"
 [[ -d "$LOCAL_APP" ]] || die "Missing local signed app: $LOCAL_APP"
 [[ -f "$LOCAL_DMG" ]] || die "Missing local signed DMG: $LOCAL_DMG"
 [[ -f "$LOCAL_ZIP" ]] || die "Missing local signed ZIP: $LOCAL_ZIP"
+[[ -f "$LOCAL_APPCAST" ]] || die "Missing local signed update feed: $LOCAL_APPCAST"
 
 VERIFY_DIR=$(mktemp -d "${TMPDIR%/}/CodeUsageReleaseVerify.XXXXXX")
 MOUNT_DIR="$VERIFY_DIR/mount"
@@ -203,6 +205,7 @@ mkdir -p \
 git archive --format=tar "$TAG_COMMIT" \
   LICENSE \
   Package.swift \
+  Package.resolved \
   README.md \
   RELEASING.md \
   THIRD_PARTY_NOTICES.md \
@@ -217,14 +220,17 @@ git archive --format=tar "$TAG_COMMIT" \
   /usr/bin/tar -xf - -C "$EXPECTED_SOURCE_DIR"
 
 gh release download "$TAG" --pattern "CodeUsage-$VERSION-*" --dir "$VERIFY_DIR"
+gh release download "$TAG" --pattern appcast.xml --dir "$VERIFY_DIR"
 REMOTE_DMG="$VERIFY_DIR/CodeUsage-$VERSION-macos-universal.dmg"
 REMOTE_ZIP="$VERIFY_DIR/CodeUsage-$VERSION-macos-universal.zip"
 REMOTE_SOURCE="$VERIFY_DIR/CodeUsage-$VERSION-source.zip"
+REMOTE_APPCAST="$VERIFY_DIR/appcast.xml"
 [[ -f "$REMOTE_DMG" && -f "$REMOTE_ZIP" && -f "$REMOTE_SOURCE" ]] || \
   die "Downloaded release assets are incomplete"
 
 /usr/bin/cmp "$LOCAL_DMG" "$REMOTE_DMG"
 /usr/bin/cmp "$LOCAL_ZIP" "$REMOTE_ZIP"
+/usr/bin/cmp "$LOCAL_APPCAST" "$REMOTE_APPCAST"
 if [[ -f "$LOCAL_SOURCE" && "$VERIFY_ONLY" != "1" ]]; then
   /usr/bin/cmp "$LOCAL_SOURCE" "$REMOTE_SOURCE"
 fi
@@ -243,6 +249,8 @@ APP_ARCHS=$(/usr/bin/lipo -archs "$DOWNLOADED_APP/Contents/MacOS/CodeUsage")
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$DOWNLOADED_APP"
 /usr/bin/xcrun stapler validate "$DOWNLOADED_APP"
 /usr/sbin/spctl --assess --type execute --verbose=2 "$DOWNLOADED_APP"
+"$PROJECT_DIR/Scripts/verify_updates.sh" "$DOWNLOADED_APP"
+"$PROJECT_DIR/Scripts/verify_appcast.sh" "$DOWNLOADED_APP" "$REMOTE_DMG" "$REMOTE_APPCAST"
 
 /usr/bin/hdiutil verify "$REMOTE_DMG"
 /usr/bin/codesign --verify --verbose=2 "$REMOTE_DMG"
@@ -276,6 +284,7 @@ VERIFY_DEVICE=""
 SOURCE_TOP_LEVEL_FILES=(
   LICENSE
   Package.swift
+  Package.resolved
   README.md
   RELEASING.md
   THIRD_PARTY_NOTICES.md
@@ -328,3 +337,4 @@ echo "$LOCAL_APP"
 echo "$LOCAL_ZIP"
 if [[ -f "$LOCAL_SOURCE" ]]; then echo "$LOCAL_SOURCE"; fi
 echo "$LOCAL_DMG"
+echo "$LOCAL_APPCAST"

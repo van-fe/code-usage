@@ -26,6 +26,7 @@ mkdir -p "$STAGING_DIR/Assets" "$OUTPUT_DIR"
 for file in \
   LICENSE \
   Package.swift \
+  Package.resolved \
   README.md \
   RELEASING.md \
   THIRD_PARTY_NOTICES.md \
@@ -61,6 +62,7 @@ pushd "$STAGING_DIR" >/dev/null
 /usr/bin/zip -qry -X "$TEMP_ZIP" \
   LICENSE \
   Package.swift \
+  Package.resolved \
   README.md \
   RELEASING.md \
   THIRD_PARTY_NOTICES.md \

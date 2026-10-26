@@ -240,3 +240,8 @@
 "个人按量消费暂不可用；此处只显示团队或组织总消费。" = "Les dépenses personnelles à la demande sont indisponibles ; seul le total de l’équipe ou de l’organisation est affiché ici.";
 "第三方模型（API）" = "Modèles tiers (API)";
 "这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。" = "Ceci indique l'utilisation incluse des modèles tiers. Les requêtes Auto dirigées vers ces modèles peuvent aussi y être comptées.";
+"检查更新…" = "Rechercher des mises à jour…";
+"自动检查更新" = "Rechercher automatiquement les mises à jour";
+"自动下载并安装更新" = "Télécharger et installer automatiquement les mises à jour";
+"无法启动应用更新" = "Impossible de démarrer les mises à jour";
+"更新会在后台下载并校验，在退出时安装；也可选择立即安装并重新启动。" = "Les mises à jour sont téléchargées et vérifiées en arrière-plan, puis installées à la fermeture. Vous pouvez aussi les installer et redémarrer immédiatement.";

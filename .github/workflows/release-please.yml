@@ -44,11 +44,28 @@ jobs:
           ref: ${{ needs.release-please.outputs.tag_name }}
           fetch-depth: 0
 
+      - name: Protect completed signed releases
+        shell: zsh {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          HAS_FEED=$(gh release view "$TAG_NAME" --json assets \
+            --jq 'any(.assets[]; .name == "appcast.xml")')
+          if [[ "$HAS_FEED" == "true" ]]; then
+            echo "This release already has a signed update feed. Rebuild using the local signed release workflow to preserve archive signatures." >&2
+            exit 1
+          fi
+
       - name: Run mapper tests
         run: ./Scripts/test.sh
 
       - name: Build Universal app and ZIP
         run: ./Scripts/package_universal.sh
+
+      - name: Test app update settings and signed feeds
+        run: ./Scripts/test_updates.sh
 
       - name: Build designed Universal DMG
         run: ./Scripts/package_dmg.sh

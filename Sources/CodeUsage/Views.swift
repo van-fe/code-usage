@@ -7,6 +7,7 @@ private let suggestedUsageColor = Color(red: 0.22, green: 0.78, blue: 0.53)
 struct DashboardView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var launchAtLogin: LaunchAtLoginManager
+    @ObservedObject var appUpdates: AppUpdateManager
     @ObservedObject var localization: LocalizationManager
     @State private var showsArchivedProviders = false
 
@@ -371,6 +372,42 @@ struct DashboardView: View {
                         }
                         .disabled(true)
                     }
+                }
+
+                Divider()
+
+                Text(verbatim: "CodeUsage \(appUpdates.version)")
+
+                Button {
+                    appUpdates.checkForUpdates()
+                } label: {
+                    Label("检查更新…", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(!appUpdates.canCheckForUpdates || store.isSimulationMode)
+
+                Toggle(
+                    "自动检查更新",
+                    isOn: Binding(
+                        get: { appUpdates.automaticallyChecksForUpdates },
+                        set: { appUpdates.setAutomaticallyChecksForUpdates($0) }
+                    )
+                )
+                .disabled(!appUpdates.isStarted || store.isSimulationMode)
+
+                Toggle(
+                    "自动下载并安装更新",
+                    isOn: Binding(
+                        get: { appUpdates.automaticallyDownloadsUpdates },
+                        set: { appUpdates.setAutomaticallyDownloadsUpdates($0) }
+                    )
+                )
+                .disabled(!appUpdates.isStarted
+                    || !appUpdates.automaticallyChecksForUpdates
+                    || store.isSimulationMode)
+                .help(L10n.text("更新会在后台下载并校验，在退出时安装；也可选择立即安装并重新启动。"))
+
+                if let error = appUpdates.startupError {
+                    Text(verbatim: error)
                 }
 
                 Divider()

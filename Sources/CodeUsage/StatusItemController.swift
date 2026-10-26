@@ -13,6 +13,7 @@ extension Notification.Name {
 final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
     private let store = UsageStore()
     private let launchAtLogin = LaunchAtLoginManager()
+    private let appUpdates = AppUpdateManager()
     private let localization = LocalizationManager()
     private let launchAtLoginPromptKey = "launchAtLogin.didOffer.v1"
     private let panel: StatusMenuPanel = {
@@ -54,10 +55,14 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
             rootView: StatusPanelRootView(
                 store: store,
                 launchAtLogin: launchAtLogin,
+                appUpdates: appUpdates,
                 localization: localization
             )
         )
         panel.onCancel = { [weak self] in
+            self?.hidePanel()
+        }
+        appUpdates.willShowUpdateUI = { [weak self] in
             self?.hidePanel()
         }
         storeCancellable = store.objectWillChange.sink { [weak self] _ in
@@ -86,6 +91,7 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
                 self.showPanel(relativeTo: button)
             }
         } else {
+            appUpdates.start()
             offerLaunchAtLoginIfNeeded()
         }
     }
@@ -494,12 +500,14 @@ private final class StatusMenuPanel: NSPanel {
 private struct StatusPanelRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var launchAtLogin: LaunchAtLoginManager
+    @ObservedObject var appUpdates: AppUpdateManager
     @ObservedObject var localization: LocalizationManager
 
     var body: some View {
         DashboardView(
             store: store,
             launchAtLogin: launchAtLogin,
+            appUpdates: appUpdates,
             localization: localization
         )
             .environment(\.locale, localization.language.locale)

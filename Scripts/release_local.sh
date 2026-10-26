@@ -154,6 +154,7 @@ if ! /usr/bin/security find-identity -v -p codesigning | \
   echo "Signing identity is not available in the current Keychain: $SIGNING_IDENTITY" >&2
   exit 1
 fi
+"$PROJECT_DIR/Scripts/generate_appcast.sh" --validate-key
 if [[ "$VALIDATE_CONFIG_ONLY" == "1" ]]; then
   echo "Developer ID, CloudKit, App Group, and widget provisioning profile configuration is valid."
   exit 0
@@ -188,6 +189,8 @@ fi
 # Downloaded provisioning profiles can carry quarantine and provenance
 # metadata that should not be part of a signed release bundle.
 /usr/bin/xattr -cr "$UNIVERSAL_APP"
+
+"$PROJECT_DIR/Scripts/sign_sparkle.sh" "$UNIVERSAL_APP" "$SIGNING_IDENTITY"
 
 /usr/bin/codesign \
   --force \
@@ -272,10 +275,15 @@ CODEUSAGE_APP_PATH="$UNIVERSAL_APP" \
   --context context:primary-signature \
   --verbose=2 "$OUTPUT_DMG"
 
+"$PROJECT_DIR/Scripts/generate_appcast.sh"
+
 if [[ "$UPLOAD_TO_GITHUB" == "1" ]]; then
   gh release upload "$TAG" "$OUTPUT_ZIP" "$OUTPUT_DMG" --clobber
+  # Publish the feed last so it never advertises an unfinished/unsigned DMG.
+  gh release upload "$TAG" "$OUTPUT_DIR/appcast.xml" --clobber
 fi
 
 echo "$UNIVERSAL_APP"
 echo "$OUTPUT_ZIP"
 echo "$OUTPUT_DMG"
+echo "$OUTPUT_DIR/appcast.xml"

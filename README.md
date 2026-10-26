@@ -22,6 +22,7 @@ Project homepage: <https://github.com/van-fe/code-usage>
 - Distinguish Cursor's base plan allowance, personal spending, and team or organization totals; show Enterprise shared pools according to the service's billing mode.
 - Provide an isolated subscription simulation mode for checking free, personal, team, and enterprise layouts.
 - Launch automatically at login, with an option to disable it at any time from the bottom of the panel.
+- Check for app updates every six hours and automatically download verified updates. Install when quitting, or choose to install and relaunch immediately; both automatic checks and installation can be disabled in Settings.
 - Optionally sync a reduced usage snapshot through iCloud for future iPhone clients.
 - Open the CodeUsage project homepage from the GitHub button at the bottom of the panel.
 - Show a clear empty state and guidance when no supported tools are detected.

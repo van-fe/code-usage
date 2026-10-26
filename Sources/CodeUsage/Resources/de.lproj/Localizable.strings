@@ -239,3 +239,8 @@
 "个人按量消费暂不可用；此处只显示团队或组织总消费。" = "Persönliche Zusatzkosten sind derzeit nicht verfügbar; hier werden nur die Gesamtkosten des Teams oder der Organisation angezeigt.";
 "第三方模型（API）" = "Drittanbieter-Modelle (API)";
 "这是第三方模型套餐额度的进度；Auto 路由到第三方模型时也可能计入这里。" = "Dies zeigt die enthaltene Nutzung von Drittanbieter-Modellen. Auch Auto-Anfragen an solche Modelle können hier zählen.";
+"检查更新…" = "Nach Updates suchen…";
+"自动检查更新" = "Automatisch nach Updates suchen";
+"自动下载并安装更新" = "Updates automatisch laden und installieren";
+"无法启动应用更新" = "App-Updates konnten nicht gestartet werden";
+"更新会在后台下载并校验，在退出时安装；也可选择立即安装并重新启动。" = "Updates werden im Hintergrund geladen und geprüft und beim Beenden installiert. Sie können auch sofort installieren und neu starten.";

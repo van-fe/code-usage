@@ -110,3 +110,24 @@ Release Please 创建版本 Tag 和 GitHub Release 后，推荐在对应的发�
 ```
 
 `Scripts/release_local.sh` 仍作为底层构建、签名与公证脚本保留，可在不上传 GitHub 时单独运行。Apple 私钥和公证凭证始终留在本机 Keychain。
+
+## 应用内自动更新
+
+macOS 应用使用 Sparkle，默认每六小时检查更新，自动下载并在退出时安装。设置菜单提供手动检查、自动检查和自动下载/安装开关。用户选择立即安装时，Sparkle 会替换应用并重新启动；需要写入授权时由 Sparkle 显示系统授权界面。应用版本仍只从 `version.json` 生成，更新比较使用单调递增的 `CFBundleVersion`。
+
+更新源是 `https://github.com/van-fe/code-usage/releases/latest/download/appcast.xml`。首次包含此功能的版本需要手动安装一次，此后才能自动更新。Release Please 和 CI 不生成更新源；只有本机正式签名、公证完成的 Universal DMG 才能进入更新源。发布新 Release 到本机签名完成之间，最新 Release 暂时没有更新源，后台检查会等待后续重试。
+
+`Config/Updates.plist` 保存更新公钥和默认设置。应用强制验证更新源签名，并在解压前校验更新包的 Ed25519 签名；签名校验失败不会超时降级。私钥使用 Sparkle 的 `com.van-fe.CodeUsage.updates` Keychain account，只保存在发布者的本机钥匙串。不要上传私钥、放进 CI 或为已发布的更新通道重新生成密钥。
+
+首次在新的发布机上，先解析依赖取得 Sparkle 工具，再通过安全方式迁移已有的 Keychain 密钥：
+
+```bash
+swift package --scratch-path .build-package resolve
+./Scripts/generate_appcast.sh --validate-key
+```
+
+保留该钥匙串的安全备份。`--validate-key` 只读取公钥并与仓库比对，不会新建或覆盖密钥。
+
+`release_local.sh` 按顺序签名 Sparkle 的辅助程序、框架、小组件和主应用，完成 App/DMG 公证与 Staple 后，再调用 `generate_appcast.sh` 为最终 DMG 和更新源签名。上传时先替换正式 DMG/ZIP，再上传 `appcast.xml`。`publish_signed_release.sh` 会重新下载更新源，验证签名、版本、下载 URL、文件长度和 DMG 签名。后续不能重新上传 CI 的同名 ad-hoc DMG；若必须重建，应重新完成本机签名发布流程。
+
+本地验证更新管理器和签名拒绝场景：`./Scripts/test_updates.sh`。应用包也会在 `package.sh` 中自动检查框架、辅助程序、双架构、运行库路径、更新配置和代码签名。
