@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/van-fe/code-usage/compare/v0.12.2...v0.13.0) (2026-10-26)
+
+
+### Features
+
+* add signed automatic macOS app updates ([6a72e2f](https://github.com/van-fe/code-usage/commit/6a72e2f34644c5e40acf51d73f9b31920789e5f3))
+
 ## [0.12.2](https://github.com/van-fe/code-usage/compare/v0.12.1...v0.12.2) (2026-09-24)
 
 
