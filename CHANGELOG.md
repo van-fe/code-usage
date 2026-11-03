@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/van-fe/code-usage/compare/v0.13.1...v0.13.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* preserve installer symlinks during signed release verification ([d5fa00c](https://github.com/van-fe/code-usage/commit/d5fa00c40f64e6d07cb4d144a17bf41c38915ba6))
+
 ## [0.13.1](https://github.com/van-fe/code-usage/compare/v0.13.0...v0.13.1) (2026-11-03)
 
 
