@@ -3,7 +3,7 @@ import Foundation
 
 @main
 struct SelfTest {
-    static func main() throws {
+    static func main() async throws {
         try codexSelectsWeeklyWindow()
         try codexMapsWorkspaceLimits()
         usageErrorsIdentifySignInFailures()
@@ -17,6 +17,7 @@ struct SelfTest {
         sharedUsageSnapshotUsesOnlyAppGroupInProduction()
         try cursorMapsReportedMetrics()
         try cursorDecodesEncryptedCredentials()
+        try await cursorCachesCredentials()
         try cursorPreservesOriginalBillingFields()
         try cursorCalculatesTotalWhenMissing()
         try cursorUsesPersonalSummaryWhenTeamOmitsIndividualSpend()
@@ -42,6 +43,65 @@ struct SelfTest {
         subscriptionSimulationBuildsFourCategories()
         suggestedUsageTracksElapsedWindow()
         print("CodeUsage mapper tests passed")
+    }
+
+    private static func cursorCachesCredentials() async throws {
+        let encrypted = "cursor-safe-storage:v1:djEwJLNOsxGboBLJL/oIMN4YkptVYFS59+ZUz0KktjwmOXo="
+        let initial = CursorStoredAuth(accessToken: encrypted, refreshToken: encrypted, sessionAccountId: "account-a")
+        let fixture = CursorCredentialFixture(initial)
+        let store = CursorCredentialStore(readStored: { try fixture.read() }, readPassword: { try fixture.password() })
+        let first = try await store.load()
+        precondition(first.accessToken == "fixture.header.signature")
+        precondition(fixture.passwordReads == 1, "Both encrypted tokens share one Keychain read")
+        for _ in 0..<3 {
+            let cached = try await store.load()
+            precondition(cached == first)
+        }
+        precondition(fixture.passwordReads == 1, "Ordinary refreshes must not access Keychain")
+        fixture.denyStoredRead = true
+        do {
+            _ = try await store.load()
+            preconditionFailure("Unavailable database must fail without using cached credentials")
+        } catch let error as UsageError { precondition(!error.requiresSignIn) }
+        fixture.denyStoredRead = false
+        let afterDatabaseRecovery = try await store.load()
+        precondition(afterDatabaseRecovery == first && fixture.passwordReads == 1)
+        await store.useRefreshedAccessToken("renewed-access", for: first)
+        let renewed = try await store.load()
+        precondition(renewed.accessToken == "renewed-access")
+        precondition(fixture.passwordReads == 1)
+        let reloaded = try await store.load(forceReload: true)
+        precondition(reloaded == first)
+        precondition(fixture.passwordReads == 2, "Authentication failure must reload Keychain")
+        fixture.set(CursorStoredAuth(accessToken: encrypted, refreshToken: "rotated-refresh", sessionAccountId: "account-a"))
+        let rotated = try await store.load()
+        precondition(rotated.refreshToken == "rotated-refresh" && fixture.passwordReads == 3)
+        fixture.set(CursorStoredAuth(accessToken: encrypted, refreshToken: "rotated-refresh", sessionAccountId: "account-b"))
+        let switched = try await store.load()
+        precondition(switched.sessionAccountId == "account-b" && fixture.passwordReads == 4)
+        await store.useRefreshedAccessToken("old-account-token", for: first)
+        let stillSwitched = try await store.load()
+        precondition(stillSwitched == switched, "Stale refresh must not overwrite another account")
+        fixture.set(CursorStoredAuth(accessToken: nil, refreshToken: nil, sessionAccountId: nil))
+        do {
+            _ = try await store.load()
+            preconditionFailure("Signed-out account reused cached credentials")
+        } catch let error as UsageError { precondition(error.requiresSignIn) }
+        precondition(fixture.passwordReads == 4, "Logout must not access Keychain")
+        fixture.set(initial)
+        fixture.denyPassword = true
+        do {
+            _ = try await store.load()
+            preconditionFailure("Keychain denial reused old credentials")
+        } catch let error as UsageError { precondition(!error.requiresSignIn) }
+        fixture.denyPassword = false
+        let afterDenial = try await store.load()
+        precondition(afterDenial == first && fixture.passwordReads == 6)
+        let afterRetry = try await store.load()
+        precondition(afterRetry == first && fixture.passwordReads == 6)
+        fixture.set(CursorStoredAuth(accessToken: "new-access", refreshToken: "new-refresh", sessionAccountId: "account-c"))
+        let plaintext = try await store.load()
+        precondition(plaintext.accessToken == "new-access" && fixture.passwordReads == 6)
     }
 
     private static func cursorDecodesEncryptedCredentials() throws {
@@ -1091,5 +1151,36 @@ struct SelfTest {
         )
         let firstDay = dstMonth.suggestedUsedPercent(at: now)
         precondition(abs((firstDay ?? -1) - (100.0 / 30.0)) < 0.001)
+    }
+}
+
+private final class CursorCredentialFixture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: CursorStoredAuth
+    private var reads = 0
+    private var denied = false
+    private var storedReadDenied = false
+
+    init(_ stored: CursorStoredAuth) { self.stored = stored }
+    func read() throws -> CursorStoredAuth {
+        lock.lock(); defer { lock.unlock() }
+        if storedReadDenied { throw UsageError.requestFailed("Database temporarily unavailable") }
+        return stored
+    }
+    func set(_ value: CursorStoredAuth) { lock.lock(); defer { lock.unlock() }; stored = value }
+    var passwordReads: Int { lock.lock(); defer { lock.unlock() }; return reads }
+    var denyPassword: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return denied }
+        set { lock.lock(); defer { lock.unlock() }; denied = newValue }
+    }
+    var denyStoredRead: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return storedReadDenied }
+        set { lock.lock(); defer { lock.unlock() }; storedReadDenied = newValue }
+    }
+    func password() throws -> Data {
+        lock.lock(); defer { lock.unlock() }
+        reads += 1
+        if denied { throw UsageError.requestFailed("Keychain access denied by test") }
+        return Data("fixture-password".utf8)
     }
 }

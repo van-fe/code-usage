@@ -14,6 +14,27 @@ struct LiveTest {
             return
         }
 
+        if selectedProvider == "cursor-cache" {
+            let counter = CursorKeychainReadCounter()
+            let credentials = CursorCredentialStore(readPassword: { try counter.password() })
+            let provider = CursorProvider(credentials: credentials)
+            do {
+                for index in 1...3 {
+                    let snapshot = try await provider.fetch()
+                    print("Cursor fetch \(index): OK plan=\(snapshot.planName ?? "unknown")")
+                }
+                guard counter.count == 1 else {
+                    print("Cursor cache: FAIL Keychain reads=\(counter.count)")
+                    exit(1)
+                }
+                print("Cursor cache: PASS 3 real usage fetches, 1 Keychain read")
+            } catch {
+                print("Cursor cache: ERROR \(error.localizedDescription)")
+                exit(1)
+            }
+            return
+        }
+
         if selectedProvider == "cursor" {
             await printResult("Cursor") {
                 try await CursorProvider().fetch()
@@ -57,5 +78,17 @@ struct LiveTest {
         } catch {
             print("\(name): ERROR \(error.localizedDescription)")
         }
+    }
+}
+
+private final class CursorKeychainReadCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var reads = 0
+    var count: Int { lock.lock(); defer { lock.unlock() }; return reads }
+    func password() throws -> Data {
+        lock.lock()
+        reads += 1
+        lock.unlock()
+        return try CursorCredentialCodec.keychainPassword()
     }
 }

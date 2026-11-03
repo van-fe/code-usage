@@ -132,12 +132,23 @@ Official release builds are signed with Apple Developer ID and notarized by Appl
 CodeUsage reads existing sign-in states locally and sends requests only to each tool's own usage service:
 
 - **Codex**: starts the local `codex app-server` and calls `account/rateLimits/read`; it does not read `~/.codex/auth.json`.
-- **Cursor**: reads the existing sign-in state from Cursor's local state database. Refresh tokens are used only for in-memory session renewal and are never written back to disk.
+- **Cursor**: reads the existing sign-in state from Cursor's local state database. Encrypted credentials are decrypted locally using `Cursor Safe Storage` in macOS Keychain. See the credential and cache details below.
 - **Claude Code**: reads the OAuth sign-in state saved by Claude Code. Refresh tokens are used only for in-memory session renewal and are never written back to disk.
 - **Kiro**: reads local sign-in records from Kiro IDE or CLI. When a supported social sign-in expires, it uses the existing refresh token and saves the renewed credential back to Kiro's original credential file or CLI database. It does not read device registration keys or browser cookies.
 - **Qoder**: first calls the local usage control interface of the signed-in Qoder CLI. If the CLI is unavailable, it uses the owner- and permission-validated `.info.json` and Unix socket to call the Qoder IDE JSON-RPC service. Qoder handles authentication; CodeUsage does not read, decrypt, or save Qoder tokens.
 
-The app contains no telemetry and does not upload usage data to a CodeUsage server. Widgets receive only a local App Group snapshot containing provider names, plan names, usage metrics, percentages, amounts or counts, stale state, and refresh time. iCloud sync is off by default. When explicitly enabled, it writes only provider names, plan names, usage metrics, percentages, amounts or counts, and refresh timestamps to the user's private CloudKit database. Access tokens, refresh tokens, cookies, local databases, file paths, raw command output, and raw server responses are excluded from both snapshot models. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
+CodeUsage has no self-hosted backend and contains no telemetry. Widgets receive only a local App Group snapshot containing provider names, plan names, usage metrics, percentages, amounts or counts, stale state, and refresh time. iCloud sync is off by default. When explicitly enabled, it writes only provider names, plan names, usage metrics, percentages, amounts or counts, and refresh timestamps to the user's private CloudKit database. Access tokens, refresh tokens, cookies, local databases, file paths, raw command output, and raw server responses are excluded from both snapshot models. Some Cursor and Kiro client protocols are not stable public APIs; if fields change, the app preserves other available metrics where possible and displays a clear error.
+
+### Cursor credentials and Keychain access
+
+CodeUsage reads Cursor's existing credentials to retrieve account usage; it does not ask for your Cursor password. macOS may request permission to access `Cursor Safe Storage` on first use or after the app's signature changes.
+
+- **Local decryption only:** the `Cursor Safe Storage` secret is used on this Mac to decrypt Cursor's stored credentials. This secret and the local credential database are never uploaded to any server.
+- **Memory-only token cache:** decrypted access and refresh tokens are kept only in the running app's memory. Each usage refresh compares the current local credential values. Unchanged credentials reuse the cache without accessing Keychain. Credential or account changes and authentication failures invalidate/reload the cache; quitting the app discards it.
+- **Official authentication requests:** access tokens are sent over HTTPS only to Cursor's official `api2.cursor.sh` and `cursor.com` usage/plan endpoints. When renewal is required, the refresh token is sent to `https://api2.cursor.sh/oauth/token`. Access and refresh tokens are used only for these official authentication requests; the Keychain decryption secret and local database are never transmitted.
+- **No credential export:** CodeUsage does not persist these tokens to its own files or write them back to Cursor's database. The decryption secret is not retained in the token cache. Credentials are excluded from CodeUsage logs, widget snapshots, and iCloud usage snapshots. Optional iCloud sync transfers only the reduced usage data described above.
+
+Review the implementation: [Cursor credential loading, memory cache, decryption, and official API requests](Sources/CodeUsage/CursorProvider.swift), [cache regression tests](Scripts/SelfTest.swift), and [iCloud snapshot fields](Sources/CodeUsage/CloudSync.swift).
 
 ## Build from Source
 

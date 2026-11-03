@@ -57,34 +57,159 @@ enum CursorCredentialCodec {
     }
 }
 
-private struct CursorAuth: Sendable {
+struct CursorAuth: Equatable, Sendable {
     let accessToken: String
     let refreshToken: String?
     let sessionAccountId: String?
 }
 
+struct CursorStoredAuth: Equatable, Sendable {
+    let accessToken: String?
+    let refreshToken: String?
+    let sessionAccountId: String?
+}
+
+/// Only decoded tokens are cached, for this process's lifetime. The Keychain
+/// password is scoped to one load and is never retained in the cache.
+actor CursorCredentialStore {
+    private let readStored: @Sendable () throws -> CursorStoredAuth
+    private let readPassword: @Sendable () throws -> Data
+    private var stored: CursorStoredAuth?
+    private var auth: CursorAuth?
+
+    init(
+        readStored: @escaping @Sendable () throws -> CursorStoredAuth = { try CursorCredentialStore.readStoredAuth() },
+        readPassword: @escaping @Sendable () throws -> Data = { try CursorCredentialCodec.keychainPassword() }
+    ) {
+        self.readStored = readStored
+        self.readPassword = readPassword
+    }
+
+    func load(forceReload: Bool = false) throws -> CursorAuth {
+        // A transient database read failure must not cause another Keychain
+        // lookup once the same stored credentials can be read again.
+        // Authentication failures still discard the cache immediately.
+        if forceReload { invalidate() }
+        let latest = try readStored()
+        do {
+            if !forceReload, latest == stored, let auth { return auth }
+            invalidate()
+            guard let access = latest.accessToken, !access.isEmpty else {
+                throw UsageError.notSignedIn("Cursor 尚未登录")
+            }
+            var password: Data?
+            func decode(_ value: String) throws -> String {
+                try CursorCredentialCodec.decode(value) {
+                    if let password { return password }
+                    let loaded = try readPassword()
+                    password = loaded
+                    return loaded
+                }
+            }
+            let decoded = try CursorAuth(
+                accessToken: decode(access),
+                refreshToken: latest.refreshToken.map { try decode($0) },
+                sessionAccountId: latest.sessionAccountId
+            )
+            stored = latest
+            auth = decoded
+            return decoded
+        } catch {
+            invalidate()
+            throw error
+        }
+    }
+
+    func invalidate() {
+        stored = nil
+        auth = nil
+    }
+
+    func useRefreshedAccessToken(_ token: String, for original: CursorAuth) {
+        // A concurrent load may already have switched to another account.
+        guard auth == original else { return }
+        auth = CursorAuth(accessToken: token, refreshToken: original.refreshToken,
+                          sessionAccountId: original.sessionAccountId)
+    }
+
+    static func readStoredAuth() throws -> CursorStoredAuth {
+        let path = ProcessUtils.expandedHome("~/Library/Application Support/Cursor/User/globalStorage/state.vscdb")
+        guard FileManager.default.fileExists(atPath: path) else {
+            throw UsageError.notInstalled("未找到 Cursor，请先安装并登录 Cursor")
+        }
+        let result = try ProcessUtils.run(
+            executable: "/usr/bin/sqlite3",
+            arguments: ["-readonly", "-json", path,
+                "SELECT key,value FROM ItemTable WHERE key IN ('cursorAuth/accessToken','cursorAuth/refreshToken','cursorAuth/stripeMembershipAuthId');"]
+        )
+        guard result.status == 0 else {
+            throw UsageError.requestFailed("无法读取 Cursor 登录数据库")
+        }
+        struct Row: Decodable { let key: String; let value: String? }
+        let rows: [Row]
+        if result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            rows = []
+        } else {
+            guard let decoded = try? JSONDecoder().decode([Row].self, from: Data(result.stdout.utf8)) else {
+                throw UsageError.invalidResponse("无法读取 Cursor 登录数据库")
+            }
+            rows = decoded
+        }
+        func value(_ key: String) -> String? {
+            guard let raw = rows.first(where: { $0.key == key })?.value else { return nil }
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return CursorStoredAuth(
+            accessToken: value("cursorAuth/accessToken"),
+            refreshToken: value("cursorAuth/refreshToken"),
+            sessionAccountId: value("cursorAuth/stripeMembershipAuthId")
+        )
+    }
+}
+
 actor CursorProvider {
-    private let databasePath = "~/Library/Application Support/Cursor/User/globalStorage/state.vscdb"
-    private var inMemoryAccessToken: String?
+    private let credentials: CursorCredentialStore
+
+    init(credentials: CursorCredentialStore = CursorCredentialStore()) {
+        self.credentials = credentials
+    }
+
+    private static func isAuthenticationFailure(_ status: Int) -> Bool {
+        status == 401 || status == 403
+    }
 
     func fetch(individualLimitCents: Int64? = nil) async throws -> ProviderSnapshot {
-        let databasePath = self.databasePath
-        let auth = try await Task.detached(priority: .utility) {
-            try Self.readAuth(databasePath: databasePath)
-        }.value
-        var accessToken = inMemoryAccessToken ?? auth.accessToken
+        var auth = try await credentials.load()
+        var accessToken = auth.accessToken
         var usage = try await requestUsage(accessToken: accessToken)
 
-        if usage.statusCode == 401 || usage.statusCode == 403 {
-            guard let refreshToken = auth.refreshToken else {
-                throw UsageError.notSignedIn("Cursor 登录已过期，请打开 Cursor 重新登录")
+        if Self.isAuthenticationFailure(usage.statusCode) {
+            // Re-read Cursor's latest credentials before attempting session renewal.
+            // This also drops any refreshed token cached for a previous login.
+            auth = try await credentials.load(forceReload: true)
+            if auth.accessToken != accessToken {
+                accessToken = auth.accessToken
+                usage = try await requestUsage(accessToken: accessToken)
             }
-            accessToken = try await refresh(refreshToken: refreshToken)
-            inMemoryAccessToken = accessToken
-            usage = try await requestUsage(accessToken: accessToken)
+            if Self.isAuthenticationFailure(usage.statusCode) {
+                guard let refreshToken = auth.refreshToken else {
+                    await credentials.invalidate()
+                    throw UsageError.notSignedIn("Cursor 登录已过期，请打开 Cursor 重新登录")
+                }
+                do {
+                    accessToken = try await refresh(refreshToken: refreshToken)
+                } catch {
+                    await credentials.invalidate()
+                    throw error
+                }
+                await credentials.useRefreshedAccessToken(accessToken, for: auth)
+                usage = try await requestUsage(accessToken: accessToken)
+            }
         }
         guard (200..<300).contains(usage.statusCode) else {
-            if usage.statusCode == 401 || usage.statusCode == 403 {
+            if Self.isAuthenticationFailure(usage.statusCode) {
+                await credentials.invalidate()
                 throw UsageError.notSignedIn("Cursor 登录已过期，请打开 Cursor 重新登录")
             }
             throw UsageError.requestFailed("Cursor 用量请求失败（HTTP \(usage.statusCode)）")
@@ -106,40 +231,6 @@ actor CursorProvider {
             planData: plan?.data,
             personalSummaryData: personalSummary?.data,
             individualLimitCents: individualLimitCents
-        )
-    }
-
-    private static func readAuth(databasePath: String) throws -> CursorAuth {
-        let path = ProcessUtils.expandedHome(databasePath)
-        guard FileManager.default.fileExists(atPath: path) else {
-            throw UsageError.notInstalled("未找到 Cursor，请先安装并登录 Cursor")
-        }
-        var password: Data?
-        func value(_ key: String) throws -> String? {
-            let sql = "SELECT value FROM ItemTable WHERE key='\(key)' LIMIT 1;"
-            let result = try ProcessUtils.run(
-                executable: "/usr/bin/sqlite3",
-                arguments: ["-readonly", path, sql]
-            )
-            guard result.status == 0 else {
-                throw UsageError.requestFailed("无法读取 Cursor 登录数据库")
-            }
-            let trimmed = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            return try CursorCredentialCodec.decode(trimmed) {
-                if let password { return password }
-                let loaded = try CursorCredentialCodec.keychainPassword()
-                password = loaded
-                return loaded
-            }
-        }
-        guard let access = try value("cursorAuth/accessToken") else {
-            throw UsageError.notSignedIn("Cursor 尚未登录")
-        }
-        return CursorAuth(
-            accessToken: access,
-            refreshToken: try value("cursorAuth/refreshToken"),
-            sessionAccountId: try value("cursorAuth/stripeMembershipAuthId")
         )
     }
 

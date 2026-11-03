@@ -133,12 +133,23 @@ Universal 构建同时支持：
 CodeUsage 只在本机读取现有登录状态，并向各工具自己的用量接口发起请求：
 
 - **Codex**：启动本机 `codex app-server`，调用 `account/rateLimits/read`；不读取 `~/.codex/auth.json`。
-- **Cursor**：只读 Cursor 本机状态数据库取得现有登录态。刷新令牌只用于内存中的会话续期，不写回磁盘。
+- **Cursor**：只读 Cursor 本机状态数据库取得现有登录态。加密凭据通过 macOS 钥匙串中的 `Cursor Safe Storage` 在本机解密；详见下方的凭据与缓存说明。
 - **Claude Code**：读取 Claude Code 已保存的 OAuth 登录态。刷新令牌只用于内存中的会话续期，不写回磁盘。
 - **Kiro**：读取 Kiro IDE 或 CLI 的本机登录记录。受支持的社交登录过期时，会使用已有 refresh token 续期，并把新凭证保存回 Kiro 原有的凭证文件或 CLI 数据库；不读取设备注册密钥或浏览器 Cookie。
 - **Qoder**：优先调用已登录的 Qoder CLI 的本机用量控制接口；CLI 不可用时，才通过所有者和权限校验后的 `.info.json` 与 Unix Socket 调用 Qoder IDE 的 JSON-RPC。认证由 Qoder 处理，CodeUsage 不读取、解密或保存 Qoder token。
 
-应用不包含遥测，不会上传用量数据到 CodeUsage 自己的服务器。系统小组件只读取本机 App Group 快照，其中仅包含工具名称、套餐名称、用量指标、百分比、金额/数量、旧数据状态与刷新时间。iCloud 同步默认关闭；用户主动开启后，只把工具名称、套餐名称、用量指标、百分比、金额/数量和刷新时间写入用户自己的 CloudKit 私有数据库。访问令牌、刷新令牌、Cookie、本机数据库、文件路径、原始命令输出和服务端原始响应均不会进入这两种快照。Cursor 与 Kiro 的部分客户端协议不是公开稳定 API；字段变化时，应用会尽量保留其它可用指标并显示明确错误。
+CodeUsage 没有自建后端，也不包含遥测。系统小组件只读取本机 App Group 快照，其中仅包含工具名称、套餐名称、用量指标、百分比、金额/数量、旧数据状态与刷新时间。iCloud 同步默认关闭；用户主动开启后，只把工具名称、套餐名称、用量指标、百分比、金额/数量和刷新时间写入用户自己的 CloudKit 私有数据库。访问令牌、刷新令牌、Cookie、本机数据库、文件路径、原始命令输出和服务端原始响应均不会进入这两种快照。Cursor 与 Kiro 的部分客户端协议不是公开稳定 API；字段变化时，应用会尽量保留其它可用指标并显示明确错误。
+
+### Cursor 凭据与钥匙串访问
+
+CodeUsage 读取 Cursor 已有的凭据来获取账号用量，不要求你提供 Cursor 密码。首次使用或应用签名变化后，macOS 可能提示授权访问 `Cursor Safe Storage`。
+
+- **解密仅在本机进行**：`Cursor Safe Storage` 中的密钥仅用于在这台 Mac 上解密 Cursor 已保存的凭据。该密钥和本地凭据数据库不会上传到任何服务器。
+- **令牌仅缓存在进程内存中**：解密后的访问令牌和刷新令牌只保存在运行中的应用内存里。每次刷新用量会比较本地凭据的当前值；未变化时直接复用缓存，不访问钥匙串。凭据或账号变化、认证失败时使缓存失效并重新读取；退出应用后缓存丢弃。比较的是凭据值，因此 Cursor 数据库中其他数据的写入不会触发钥匙串访问。
+- **用于 Cursor 官方认证的网络请求**：访问令牌仅通过 HTTPS 发往 Cursor 官方 `api2.cursor.sh` 和 `cursor.com` 的用量、套餐接口；需要续期时，刷新令牌会发往 `https://api2.cursor.sh/oauth/token`。访问令牌和刷新令牌仅用于以上官方认证请求；钥匙串解密密钥和本地数据库不会通过这些请求传输。
+- **不导出凭据**：CodeUsage 不把这些令牌另存到自己的文件中，也不写回 Cursor 数据库；解密密钥不保留在令牌缓存中。凭据不会写入 CodeUsage 日志、小组件快照或 iCloud 用量快照。可选的 iCloud 同步仅传输上文列出的裁剪后用量数据。
+
+代码可供审查：[Cursor 凭据读取、内存缓存、解密与官方接口请求](Sources/CodeUsage/CursorProvider.swift)、[缓存回归测试](Scripts/SelfTest.swift)、[iCloud 快照字段](Sources/CodeUsage/CloudSync.swift)。
 
 ## 从源码构建
 
