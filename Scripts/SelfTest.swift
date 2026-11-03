@@ -16,6 +16,7 @@ struct SelfTest {
         sharedUsageSnapshotReadsHostSupportFromSandbox()
         sharedUsageSnapshotUsesOnlyAppGroupInProduction()
         try cursorMapsReportedMetrics()
+        try cursorDecodesEncryptedCredentials()
         try cursorPreservesOriginalBillingFields()
         try cursorCalculatesTotalWhenMissing()
         try cursorUsesPersonalSummaryWhenTeamOmitsIndividualSpend()
@@ -41,6 +42,34 @@ struct SelfTest {
         subscriptionSimulationBuildsFourCategories()
         suggestedUsageTracksElapsedWindow()
         print("CodeUsage mapper tests passed")
+    }
+
+    private static func cursorDecodesEncryptedCredentials() throws {
+        let plain = try CursorCredentialCodec.decode("legacy.token.value") {
+            preconditionFailure("Plaintext credentials must not access Keychain")
+        }
+        precondition(plain == "legacy.token.value")
+        // Independently generated with OpenSSL AES-128-CBC and PBKDF2-SHA1.
+        let encrypted = "cursor-safe-storage:v1:djEwJLNOsxGboBLJL/oIMN4YkptVYFS59+ZUz0KktjwmOXo="
+        let decoded = try CursorCredentialCodec.decode(encrypted) { Data("fixture-password".utf8) }
+        precondition(decoded == "fixture.header.signature")
+        for malformed in ["cursor-safe-storage:v2:unknown", "cursor-safe-storage:v1:???",
+                          "cursor-safe-storage:v1:djEwAA=="] {
+            do {
+                _ = try CursorCredentialCodec.decode(malformed) {
+                    preconditionFailure("Invalid envelopes must not access Keychain")
+                }
+                preconditionFailure("Malformed ciphertext was accepted")
+            } catch let error as UsageError {
+                if case .invalidResponse = error {} else { preconditionFailure("Incorrect format error") }
+            }
+        }
+        do {
+            _ = try CursorCredentialCodec.decode(encrypted) { Data("wrong-password".utf8) }
+            preconditionFailure("Wrong key was accepted")
+        } catch let error as UsageError {
+            precondition(!error.requiresSignIn)
+        }
     }
 
     private static func codexSelectsWeeklyWindow() throws {

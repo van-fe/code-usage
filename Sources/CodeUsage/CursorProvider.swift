@@ -1,4 +1,61 @@
 import Foundation
+import CommonCrypto
+import Security
+
+/// Cursor wraps Electron safeStorage ciphertext in its versioned storage codec.
+/// macOS Electron uses Chromium's v10 AES-CBC/PBKDF2 format.
+enum CursorCredentialCodec {
+    static func keychainPassword() throws -> Data {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "Cursor Safe Storage",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let password = result as? Data, !password.isEmpty else {
+            throw UsageError.requestFailed("无法读取 Cursor 加密凭据，请允许访问钥匙串中的 Cursor Safe Storage（状态 \(status)）")
+        }
+        return password
+    }
+
+    static func decode(_ stored: String, password: () throws -> Data = keychainPassword) throws -> String {
+        let prefix = "cursor-safe-storage:v1:"
+        guard stored.hasPrefix("cursor-safe-storage:") else { return stored }
+        guard stored.hasPrefix(prefix),
+              let encrypted = Data(base64Encoded: String(stored.dropFirst(prefix.count))),
+              encrypted.starts(with: Data("v10".utf8)),
+              encrypted.count > 3,
+              (encrypted.count - 3) % kCCBlockSizeAES128 == 0 else {
+            throw UsageError.invalidResponse("Cursor 加密凭据格式不受支持或已损坏")
+        }
+        let secret = try password()
+        let salt = Array("saltysalt".utf8)
+        var key = [UInt8](repeating: 0, count: kCCKeySizeAES128)
+        let derivation = secret.withUnsafeBytes { bytes in
+            CCKeyDerivationPBKDF(CCPBKDFAlgorithm(kCCPBKDF2),
+                bytes.bindMemory(to: Int8.self).baseAddress, secret.count,
+                salt, salt.count, CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA1),
+                1003, &key, key.count)
+        }
+        guard derivation == kCCSuccess else {
+            throw UsageError.requestFailed("无法解密 Cursor 登录凭据")
+        }
+        let ciphertext = Array(encrypted.dropFirst(3))
+        let iv = [UInt8](repeating: 0x20, count: kCCBlockSizeAES128)
+        var plaintext = [UInt8](repeating: 0, count: ciphertext.count + kCCBlockSizeAES128)
+        var count = 0
+        let status = CCCrypt(CCOperation(kCCDecrypt), CCAlgorithm(kCCAlgorithmAES),
+            CCOptions(kCCOptionPKCS7Padding), key, key.count, iv,
+            ciphertext, ciphertext.count, &plaintext, plaintext.count, &count)
+        guard status == kCCSuccess,
+              let token = String(bytes: plaintext.prefix(count), encoding: .utf8), !token.isEmpty else {
+            throw UsageError.requestFailed("无法解密 Cursor 登录凭据，请检查 Cursor Safe Storage 钥匙串访问权限")
+        }
+        return token
+    }
+}
 
 private struct CursorAuth: Sendable {
     let accessToken: String
@@ -57,22 +114,32 @@ actor CursorProvider {
         guard FileManager.default.fileExists(atPath: path) else {
             throw UsageError.notInstalled("未找到 Cursor，请先安装并登录 Cursor")
         }
-        func value(_ key: String) -> String? {
+        var password: Data?
+        func value(_ key: String) throws -> String? {
             let sql = "SELECT value FROM ItemTable WHERE key='\(key)' LIMIT 1;"
-            guard let result = try? ProcessUtils.run(
+            let result = try ProcessUtils.run(
                 executable: "/usr/bin/sqlite3",
                 arguments: ["-readonly", path, sql]
-            ), result.status == 0 else { return nil }
+            )
+            guard result.status == 0 else {
+                throw UsageError.requestFailed("无法读取 Cursor 登录数据库")
+            }
             let trimmed = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            guard !trimmed.isEmpty else { return nil }
+            return try CursorCredentialCodec.decode(trimmed) {
+                if let password { return password }
+                let loaded = try CursorCredentialCodec.keychainPassword()
+                password = loaded
+                return loaded
+            }
         }
-        guard let access = value("cursorAuth/accessToken") else {
+        guard let access = try value("cursorAuth/accessToken") else {
             throw UsageError.notSignedIn("Cursor 尚未登录")
         }
         return CursorAuth(
             accessToken: access,
-            refreshToken: value("cursorAuth/refreshToken"),
-            sessionAccountId: value("cursorAuth/stripeMembershipAuthId")
+            refreshToken: try value("cursorAuth/refreshToken"),
+            sessionAccountId: try value("cursorAuth/stripeMembershipAuthId")
         )
     }
 

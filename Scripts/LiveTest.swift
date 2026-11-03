@@ -14,6 +14,13 @@ struct LiveTest {
             return
         }
 
+        if selectedProvider == "cursor" {
+            await printResult("Cursor") {
+                try await CursorProvider().fetch()
+            }
+            return
+        }
+
         await printResult("Codex") {
             try await CodexProvider().fetch()
         }
