@@ -237,7 +237,8 @@ fi
 /usr/bin/shasum -a 256 "$REMOTE_DMG" "$REMOTE_ZIP" "$REMOTE_SOURCE"
 
 /usr/bin/unzip -tqq "$REMOTE_ZIP"
-/usr/bin/unzip -q "$REMOTE_ZIP" -d "$APP_EXTRACT_DIR"
+# ditto preserves the installer /Applications symlink on newer macOS versions.
+/usr/bin/ditto -x -k "$REMOTE_ZIP" "$APP_EXTRACT_DIR"
 DOWNLOADED_APP="$APP_EXTRACT_DIR/CodeUsage-$VERSION/CodeUsage.app"
 [[ -d "$DOWNLOADED_APP" ]] || die "Downloaded ZIP is missing CodeUsage.app"
 APP_VERSION=$(/usr/libexec/PlistBuddy \

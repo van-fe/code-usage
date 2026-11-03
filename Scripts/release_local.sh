@@ -256,7 +256,9 @@ rm -f "$OUTPUT_ZIP"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$ZIP_ROOT" "$OUTPUT_ZIP"
 /usr/bin/unzip -tqq "$OUTPUT_ZIP"
 mkdir -p "$ZIP_VERIFY_DIR"
-/usr/bin/unzip -q "$OUTPUT_ZIP" -d "$ZIP_VERIFY_DIR"
+# ditto preserves the installer /Applications symlink on newer macOS versions.
+# Keep unzip -t above for CRC validation before extracting the signed bundle.
+/usr/bin/ditto -x -k "$OUTPUT_ZIP" "$ZIP_VERIFY_DIR"
 /usr/bin/codesign --verify --deep --strict --all-architectures --verbose=2 \
   "$ZIP_VERIFY_DIR/${ZIP_ROOT:t}/CodeUsage.app"
 /usr/bin/xcrun stapler validate \
