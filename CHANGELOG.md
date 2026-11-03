@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/van-fe/code-usage/compare/v0.13.0...v0.13.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* support Cursor encrypted authentication credentials ([ce3c507](https://github.com/van-fe/code-usage/commit/ce3c507f60f8f6ba2dc20d19e3bcf91b659e4999))
+
 ## [0.13.0](https://github.com/van-fe/code-usage/compare/v0.12.2...v0.13.0) (2026-10-26)
 
 
