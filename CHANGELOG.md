@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.3](https://github.com/van-fe/code-usage/compare/v0.13.2...v0.13.3) (2026-11-03)
+
+
+### Bug Fixes
+
+* cache Cursor credentials and document local credential handling ([1e28a77](https://github.com/van-fe/code-usage/commit/1e28a77fe876f9a00cb16d59f5dfffe46e428ed7))
+
 ## [0.13.2](https://github.com/van-fe/code-usage/compare/v0.13.1...v0.13.2) (2026-11-03)
 
 
