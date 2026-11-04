@@ -141,7 +141,9 @@ CodeUsage has no self-hosted backend and contains no telemetry. Widgets receive 
 
 ### Cursor credentials and Keychain access
 
-CodeUsage reads Cursor's existing credentials to retrieve account usage; it does not ask for your Cursor password. macOS may request permission to access `Cursor Safe Storage` on first use or after the app's signature changes.
+**Why is Keychain access needed now?** Cursor changed how it stores login tokens locally: the older format stored plaintext tokens in its state database, while the newer format encrypts them with Electron's secure storage and saves them with the `cursor-safe-storage:v1:` prefix. On macOS, Cursor keeps the decryption secret in the `Cursor Safe Storage` Keychain item. CodeUsage needs the existing login token to request usage from Cursor, so supporting the encrypted format requires reading this item and decrypting the token locally. Sending the encrypted database value as if it were a token causes authentication to fail, which can incorrectly report “signed out” or “session expired” even while Cursor is signed in.
+
+macOS may therefore ask you to allow CodeUsage to access `Cursor Safe Storage`, especially on first use or after the app's signature changes. This access reads Cursor's existing sign-in state; CodeUsage does not ask for your Cursor password. Credentials still stored in the older plaintext format do not require Keychain decryption.
 
 - **Local decryption only:** the `Cursor Safe Storage` secret is used on this Mac to decrypt Cursor's stored credentials. This secret and the local credential database are never uploaded to any server.
 - **Memory-only token cache:** decrypted access and refresh tokens are kept only in the running app's memory. Each usage refresh compares the current local credential values. Unchanged credentials reuse the cache without accessing Keychain. Credential or account changes and authentication failures invalidate/reload the cache; quitting the app discards it.
