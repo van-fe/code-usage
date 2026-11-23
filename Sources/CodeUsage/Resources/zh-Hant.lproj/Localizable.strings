@@ -242,3 +242,48 @@
 "自动下载并安装更新" = "自動下載並安裝更新";
 "无法启动应用更新" = "無法啟動應用程式更新";
 "更新会在后台下载并校验，在退出时安装；也可选择立即安装并重新启动。" = "更新會在背景下載並驗證，於結束時安裝；也可選擇立即安裝並重新啟動。";
+
+// Client usage providers
+"安装并登录支持的工具后刷新，支持 Devin 和 DeepSeek Harness。" = "安装并登录支持的工具后刷新，支持 Devin 和 DeepSeek Harness。";
+"可用余额" = "可用余额";
+"赠金余额" = "赠金余额";
+"充值余额" = "充值余额";
+"日额度" = "日额度";
+"套餐 ACU" = "套餐 ACU";
+"DeepSeek 当前余额不足以调用 API" = "DeepSeek 当前余额不足以调用 API";
+"用量网络请求失败，请稍后重试" = "用量网络请求失败，请稍后重试";
+"用量接口返回无效响应" = "用量接口返回无效响应";
+"用量接口响应过大" = "用量接口响应过大";
+"用量接口地址不受支持" = "用量接口地址不受支持";
+"客户端登录已过期，请重新登录后刷新" = "客户端登录已过期，请重新登录后刷新";
+"当前账号没有查询用量的权限" = "当前账号没有查询用量的权限";
+"用量请求过于频繁，请稍后重试" = "用量请求过于频繁，请稍后重试";
+"未找到 Devin 客户端登录数据，请先安装并登录 Devin" = "未找到 Devin 客户端登录数据，请先安装并登录 Devin";
+"无法读取 Devin 客户端登录状态" = "无法读取 Devin 客户端登录状态";
+"Devin 客户端登录数据格式无效" = "Devin 客户端登录数据格式无效";
+"请在 Devin 客户端登录后刷新" = "请在 Devin 客户端登录后刷新";
+"暂不支持此 Devin 客户端服务地址" = "暂不支持此 Devin 客户端服务地址";
+"Devin 客户端暂未提供可显示的额度" = "Devin 客户端暂未提供可显示的额度";
+"Devin 客户端用量数据格式无效" = "Devin 客户端用量数据格式无效";
+"请在 DeepSeek Harness 登录或配置 DeepSeek API Key" = "请在 DeepSeek Harness 登录或配置 DeepSeek API Key";
+"DeepSeek Harness 凭据文件权限或格式不安全" = "DeepSeek Harness 凭据文件权限或格式不安全";
+"DeepSeek Harness 凭据格式不受支持" = "DeepSeek Harness 凭据格式不受支持";
+"DeepSeek Harness 余额数据格式无效" = "DeepSeek Harness 余额数据格式无效";
+"DeepSeek Harness 登录已过期，请重新登录" = "DeepSeek Harness 登录已过期，请重新登录";
+"DeepSeek 未返回余额" = "DeepSeek 未返回余额";
+"DeepSeek 余额币种无效" = "DeepSeek 余额币种无效";
+"DeepSeek 余额数值无效" = "DeepSeek 余额数值无效";
+"打开 Devin 客户端" = "打开 Devin 客户端";
+"打开 DeepSeek Harness" = "打开 DeepSeek Harness";
+
+// Devin billing models
+"美元用量" = "美元用量";
+"套餐 ACU（不限量）" = "方案 ACU（不限量）";
+"美元用量（不限量）" = "美元用量（不限量）";
+"Prompt Credits（不限量）" = "Prompt Credits（不限量）";
+"Flow Credits（不限量）" = "Flow Credits（不限量）";
+"加购 Credits（不限量）" = "加購 Credits（不限量）";
+"共享按量余额" = "共享隨用隨付餘額";
+"额外消费余额" = "額外用量餘額";
+"当前套餐未返回可显示的用量，请在 Devin 客户端查看。" = "目前方案未傳回可顯示的用量，請在 Devin 用戶端查看。";
+"usage.quantity_limit" = "額度 %@ %@";

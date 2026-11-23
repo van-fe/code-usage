@@ -49,6 +49,8 @@ for asset in \
   provider-cursor.svg \
   provider-claude.svg \
   provider-kiro.svg \
+  provider-devin.svg \
+  provider-deepseek.svg \
   provider-qoder.svg \
   github-mark.svg \
   statusbar-logo.svg \

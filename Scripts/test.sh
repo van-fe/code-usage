@@ -79,6 +79,10 @@ swiftc \
   "$PROJECT_DIR/Sources/CodeUsage/ClaudeProvider.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/KiroProvider.swift" \
   "$PROJECT_DIR/Sources/CodeUsage/QoderProvider.swift" \
+  "$PROJECT_DIR/Sources/CodeUsage/ProviderHTTPClient.swift" \
+  "$PROJECT_DIR/Sources/CodeUsage/DevinProvider.swift" \
+  "$PROJECT_DIR/Sources/CodeUsage/DeepSeekProvider.swift" \
+  "$PROJECT_DIR/Sources/CodeUsage/UsageMetricDisplayFormatter.swift" \
   "$PROJECT_DIR/Scripts/SelfTest.swift" \
   -framework CloudKit \
   -framework Security \

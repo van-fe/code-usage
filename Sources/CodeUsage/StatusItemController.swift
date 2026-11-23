@@ -452,6 +452,8 @@ final class CodeUsageAppDelegate: NSObject, NSApplicationDelegate {
         case .claude: fallback = "asterisk"
         case .kiro: fallback = "wand.and.stars"
         case .qoder: fallback = "q.square"
+        case .devin: fallback = "d.circle"
+        case .deepseek: fallback = "water.waves"
         }
         return NSImage(
             systemSymbolName: fallback,

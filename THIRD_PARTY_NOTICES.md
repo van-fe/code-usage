@@ -52,3 +52,29 @@ CodeUsage includes the Sparkle update framework: https://github.com/sparkle-proj
 
 Its complete license and third-party notices are in `Config/Sparkle-LICENSE` in
 the source distribution and `Contents/Resources/Sparkle-LICENSE.txt` in the app.
+
+## Devin and DeepSeek glyphs
+
+The monochrome Devin and DeepSeek SVGs are from [LobeHub Icons](https://github.com/lobehub/lobe-icons), used to identify their respective services. Devin, DeepSeek, and their logos belong to their respective owners; no endorsement is implied.
+
+MIT License
+
+Copyright (c) 2023 LobeHub
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

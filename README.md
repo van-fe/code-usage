@@ -6,7 +6,7 @@ English | [简体中文](README.zh-CN.md)
   <img src="Assets/AppIcon-1024.png" width="112" alt="CodeUsage app icon">
 </p>
 
-CodeUsage is a lightweight, native macOS menu bar app that brings Codex, Cursor, Claude Code, Kiro, and Qoder usage and quota information together in one panel.
+CodeUsage is a lightweight, native macOS menu bar app that brings Codex, Cursor, Claude Code, Kiro, Qoder, Devin, and DeepSeek usage and quota information together in one panel.
 
 Project homepage: <https://github.com/van-fe/code-usage>
 
@@ -231,3 +231,12 @@ Tool names and monochrome marks are used only to identify the corresponding serv
 CodeUsage is distributed under a [proprietary source-available license](LICENSE), not an open-source license.
 
 Users may download, install, and use official unmodified builds published by the author free of charge. Without the author's written permission, you may not modify, create derivative works, repackage, redistribute, sell, commercialize, or publish official or modified builds to any app store, software marketplace, package repository, or download platform. Third-party materials remain subject to the separate terms listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Devin and DeepSeek Harness
+
+CodeUsage detects these installed clients and reads the account already configured in each one. Sign in through the client, then refresh CodeUsage. No separate CodeUsage API-key configuration is needed.
+
+- **Devin Desktop**: reads the current login from the client’s local SQLite database in read-only mode, then queries its first-party usage service. Supports Free, Pro, Max, Teams, and Enterprise response formats: daily/weekly quotas (respecting hidden windows), shared or individual extra-usage balances, ACU usage/limits, dollar usage/limits, and legacy Prompt/Flow/add-on Credits. Credit protocol values are divided by 100; extra-usage microdollars by 1,000,000. Unlimited allowances are labeled without a fabricated percentage, add-on Credits carry no monthly reset, and missing usage is explained without a fake zero. ACU and dollar metrics can appear alongside quotas. Only Pro has been verified with a live account; other billing models are covered by response fixtures. See [Devin plans and usage](https://docs.devin.ai/desktop/accounts/usage). The desktop protocol still uses Windsurf identifiers.
+- **DeepSeek Harness**: reads `~/.dsh/.credentials.yaml` (or `$DSH_HOME/.credentials.yaml`). A stored Platform account grant takes precedence over `refs.DEEPSEEK_API_KEY`, matching the Harness account mode. Account mode shows recharge and bonus wallets; API-key mode shows available, granted, and topped-up balances through [DeepSeek’s balance API](https://api-docs.deepseek.com/api/get-user-balance/). File ownership and owner-only permissions are checked before reading credentials. Unsupported YAML formats produce an error instead of guessing a credential.
+
+Credentials stay in the clients’ existing stores, are never logged, and are sent only to fixed first-party endpoints without following redirects. Widgets and iOS receive only derived display data. The menu bar shows actual balance amounts when no total allowance exists, and does not infer a remaining percentage.

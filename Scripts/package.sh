@@ -88,6 +88,8 @@ cp "$PROJECT_DIR/Assets/provider-cursor.svg" "$CONTENTS_DIR/Resources/provider-c
 cp "$PROJECT_DIR/Assets/provider-claude.svg" "$CONTENTS_DIR/Resources/provider-claude.svg"
 cp "$PROJECT_DIR/Assets/provider-kiro.svg" "$CONTENTS_DIR/Resources/provider-kiro.svg"
 cp "$PROJECT_DIR/Assets/provider-qoder.svg" "$CONTENTS_DIR/Resources/provider-qoder.svg"
+cp "$PROJECT_DIR/Assets/provider-deepseek.svg" "$CONTENTS_DIR/Resources/provider-deepseek.svg"
+cp "$PROJECT_DIR/Assets/provider-devin.svg" "$CONTENTS_DIR/Resources/provider-devin.svg"
 cp "$PROJECT_DIR/Assets/github-mark.svg" "$CONTENTS_DIR/Resources/github-mark.svg"
 cp "$PROJECT_DIR/Assets/statusbar-logo.svg" "$CONTENTS_DIR/Resources/statusbar-logo.svg"
 cp "$PROJECT_DIR/Assets/AppIcon.icns" "$CONTENTS_DIR/Resources/AppIcon.icns"
@@ -96,6 +98,8 @@ WIDGET_ICON_ASSETS=(
   provider-cursor.svg
   provider-claude.svg
   provider-kiro.svg
+  provider-devin.svg
+  provider-deepseek.svg
   provider-qoder.svg
   statusbar-logo.svg
 )

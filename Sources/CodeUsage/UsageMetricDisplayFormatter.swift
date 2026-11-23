@@ -96,7 +96,20 @@ enum UsageMetricDisplayFormatter {
             if let used {
                 return L10n.format("usage.quantity_used", decimal(used), unit)
             }
+            if let limit {
+                return L10n.format("usage.quantity_limit", decimal(limit), unit)
+            }
             return nil
+        }
+    }
+
+    static func compactValueText(_ metric: UsageMetric) -> String? {
+        guard case .quantity(let used, let limit, let remaining, let unit) = metric.value,
+              let amount = remaining ?? used ?? limit else { return nil }
+        switch unit {
+        case "CNY": return "¥\(decimal(amount))"
+        case "USD": return "$\(decimal(amount))"
+        default: return "\(decimal(amount)) \(unit)"
         }
     }
 

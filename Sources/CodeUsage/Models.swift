@@ -54,6 +54,8 @@ enum ProviderKind: String, CaseIterable, Identifiable, Hashable, Sendable {
     case claude
     case kiro
     case qoder
+    case devin
+    case deepseek
 
     var id: String { rawValue }
 
@@ -64,6 +66,8 @@ enum ProviderKind: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .claude: return "Claude Code"
         case .kiro: return "Kiro"
         case .qoder: return "Qoder"
+        case .devin: return "Devin"
+        case .deepseek: return "DeepSeek"
         }
     }
 
@@ -74,8 +78,12 @@ enum ProviderKind: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .claude: return "CC"
         case .kiro: return "K"
         case .qoder: return "Q"
+        case .devin: return "D"
+        case .deepseek: return "DS"
         }
     }
+
+    var supportsValueOnlyMetrics: Bool { self == .devin || self == .deepseek }
 
     var menuBarPreferenceKey: String {
         "menuBar.\(rawValue)"
@@ -101,6 +109,14 @@ enum ProviderInstallation {
 
     static func isInstalled(_ provider: ProviderKind) -> Bool {
         switch provider {
+        case .devin:
+            return FileManager.default.fileExists(atPath: "/Applications/Devin.app") ||
+                FileManager.default.fileExists(atPath: expandedHome("~/Applications/Devin.app")) ||
+                FileManager.default.fileExists(atPath: DevinProvider.databasePath)
+        case .deepseek:
+            return FileManager.default.fileExists(atPath: "/Applications/DeepSeek Harness.app") ||
+                FileManager.default.fileExists(atPath: expandedHome("~/Applications/DeepSeek Harness.app")) ||
+                FileManager.default.fileExists(atPath: DeepSeekProvider.credentialsPath)
         case .codex:
             return hasExecutable([
                 "/Applications/ChatGPT.app/Contents/Resources/codex",
@@ -162,6 +178,8 @@ enum ProviderInstallation {
                 ],
                 arguments: "login"
             )
+        case .devin, .deepseek:
+            return nil
         case .cursor:
             return nil
         case .claude:
@@ -247,6 +265,8 @@ enum ProviderInstallation {
                     "/usr/bin/codex"
                 ]
             )
+        case .devin, .deepseek:
+            return nil
         case .cursor:
             // Cursor's `cursor`/`code` launchers open the IDE; they are not an
             // interactive agent CLI, so the IDE action handles this provider.
@@ -535,7 +555,7 @@ struct ProviderSnapshot: Equatable, Sendable {
            }) {
             return personalOnDemand
         }
-        return metrics.first(where: \.showsProgress)
+        return metrics.first(where: \.showsProgress) ?? (provider.supportsValueOnlyMetrics ? metrics.first : nil)
     }
 
     var widgetPrimaryMetric: UsageMetric? {

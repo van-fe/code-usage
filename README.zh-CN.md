@@ -6,7 +6,7 @@
   <img src="Assets/AppIcon-1024.png" width="112" alt="CodeUsage 应用图标">
 </p>
 
-CodeUsage 是一款轻量、原生的 macOS 菜单栏应用，用一个面板集中查看 Codex、Cursor、Claude Code、Kiro 和 Qoder 的用量与额度。
+CodeUsage 是一款轻量、原生的 macOS 菜单栏应用，用一个面板集中查看 Codex、Cursor、Claude Code、Kiro、Qoder、Devin 和 DeepSeek 的用量与额度。
 
 项目主页：<https://github.com/van-fe/code-usage>
 
@@ -232,3 +232,12 @@ CodeUsage 只展示当前登录态能够可靠读取的数据。若服务端没�
 CodeUsage 采用[专有源码可见许可证](LICENSE)，不是开源软件。
 
 允许用户免费下载、安装和使用由作者发布的官方未修改版本。未经作者书面授权，不得修改、二次开发、重新打包、再分发、销售或商业化，也不得将官方或修改后的版本上架任何应用商店、软件市场、包仓库或下载平台。第三方材料仍分别适用 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 中列明的许可条款。
+
+### Devin 和 DeepSeek Harness
+
+自动识别已安装的客户端，读取各客户端当前配置的账号。先在客户端完成登录，再刷新 CodeUsage，无需在 CodeUsage 中另外填写 API Key。
+
+- **Devin 桌面端**：以只读方式读取客户端 SQLite 数据库中的当前登录态，再向客户端自身的官方服务查询额度。覆盖 Free、Pro、Max、Teams、Enterprise 的返回格式：日／周额度（遵循隐藏窗口标志）、个人或共享的额外消费余额、ACU 用量／上限、美元用量／上限及旧版 Prompt／Flow／加购 Credits。协议内 Credits 除以 100，额外消费微美元除以 1,000,000；无限额不推算百分比，加购 Credits 不标注月度重置。ACU、美元用量可与日／周额度同时显示；未返回用量时明确提示，不假设为零。当前仅 Pro 使用真实账号验证，其他计费模型使用响应样例测试覆盖。参见[官方套餐与用量说明](https://docs.devin.ai/desktop/accounts/usage)。桌面协议仍沿用 Windsurf 标识。
+- **DeepSeek Harness**：读取 `~/.dsh/.credentials.yaml`（设置 `DSH_HOME` 时使用该目录）。优先使用已保存的开放平台账号授权，其次使用 `refs.DEEPSEEK_API_KEY`，与 Harness 的账号模式保持一致。账号授权模式显示充值及赠金钱包；API Key 模式通过[官方余额接口](https://api-docs.deepseek.com/zh-cn/api/get-user-balance/)显示可用余额、赠金和充值余额。读取前校验文件所有者及仅所有者可读写权限；不支持的 YAML 格式会明确报错，不猜测凭据。
+
+凭据保留在客户端原有存储中，不写入日志，只发送到固定的官方接口，并拒绝重定向。小组件和 iOS 只接收显示数据；没有总额度的余额在菜单栏显示实际金额，不推算剩余百分比。

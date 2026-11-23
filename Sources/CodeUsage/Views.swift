@@ -169,7 +169,7 @@ struct DashboardView: View {
             Text("未检测到支持的工具")
                 .font(.headline)
 
-            Text("请先安装 Codex、Cursor、Claude Code、Kiro 或 Qoder，\n安装完成后重新检测。")
+            Text(L10n.text("安装并登录支持的工具后刷新，支持 Devin 和 DeepSeek Harness。"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -781,7 +781,7 @@ private struct ProviderCard: View {
         switch provider {
         case .cursor, .kiro, .qoder:
             return "chevron.left.forwardslash.chevron.right"
-        case .codex, .claude:
+        case .codex, .claude, .devin, .deepseek:
             return "macwindow"
         }
     }
@@ -798,6 +798,8 @@ private struct ProviderCard: View {
         case .claude: return L10n.text("在终端启动 Claude Code")
         case .kiro: return L10n.text("在终端启动 Kiro CLI")
         case .qoder: return L10n.text("在终端启动 Qoder CLI")
+        case .devin: return "Devin"
+        case .deepseek: return "DeepSeek Harness"
         }
     }
 
@@ -1098,6 +1100,7 @@ private struct ProviderCard: View {
 
     private func metricHelp(_ metric: UsageMetric) -> String? {
         switch provider {
+        case .devin, .deepseek: return nil
         case .codex:
             switch metric.id {
             case "individual_limit": return L10n.text("metric.help.codex.individual_limit")
@@ -1794,6 +1797,8 @@ struct ProviderAppIcon: View {
         case .claude: return "asterisk"
         case .kiro: return "wand.and.stars"
         case .qoder: return "q.square"
+        case .devin: return "d.circle"
+        case .deepseek: return "water.waves"
         }
     }
 }
@@ -1846,6 +1851,12 @@ enum ProviderAppLauncher {
 
     private static func candidates(for provider: ProviderKind) -> [ApplicationCandidate] {
         switch provider {
+        case .devin:
+            return [ApplicationCandidate(title: "打开 Devin 客户端", bundleIdentifiers: ["com.exafunction.windsurf"],
+                paths: ["/Applications/Devin.app", ProcessUtils.expandedHome("~/Applications/Devin.app")])]
+        case .deepseek:
+            return [ApplicationCandidate(title: "打开 DeepSeek Harness", bundleIdentifiers: ["com.deepseek.dsh"],
+                paths: ["/Applications/DeepSeek Harness.app", ProcessUtils.expandedHome("~/Applications/DeepSeek Harness.app")])]
         case .codex:
             return [
                 ApplicationCandidate(

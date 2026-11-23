@@ -7,6 +7,15 @@ struct LiveTest {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
 
+        if selectedProvider == "devin" {
+            await printResult("Devin") { try await DevinProvider().fetch() }
+            return
+        }
+        if selectedProvider == "deepseek" {
+            await printResult("DeepSeek Harness") { try await DeepSeekProvider().fetch() }
+            return
+        }
+
         if selectedProvider == "qoder" {
             await printResult("Qoder") {
                 try await QoderProvider().fetch()
@@ -58,6 +67,12 @@ struct LiveTest {
                 try await KiroProvider().fetch()
             }
         }
+        if ProviderInstallation.isInstalled(.devin) {
+            await printResult("Devin") { try await DevinProvider().fetch() }
+        }
+        if ProviderInstallation.isInstalled(.deepseek) {
+            await printResult("DeepSeek Harness") { try await DeepSeekProvider().fetch() }
+        }
         if ProviderInstallation.isInstalled(.qoder) {
             await printResult("Qoder") {
                 try await QoderProvider().fetch()
@@ -72,7 +87,10 @@ struct LiveTest {
         do {
             let snapshot = try await operation()
             let metrics = snapshot.metrics.map {
-                "\($0.title)=\(String(format: "%.1f", $0.usedPercent))%"
+                if $0.showsProgress {
+                    return "\($0.title)=\(String(format: "%.1f", $0.usedPercent))%"
+                }
+                return "\($0.title)=\(UsageMetricDisplayFormatter.valueText($0, provider: snapshot.provider, snapshot: snapshot) ?? "unknown")"
             }.joined(separator: ", ")
             print("\(name): OK plan=\(snapshot.planName ?? "unknown") \(metrics)")
         } catch {

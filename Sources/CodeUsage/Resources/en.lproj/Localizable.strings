@@ -287,3 +287,48 @@
 "自动下载并安装更新" = "Automatically download and install updates";
 "无法启动应用更新" = "Unable to start app updates";
 "更新会在后台下载并校验，在退出时安装；也可选择立即安装并重新启动。" = "Updates are downloaded and verified in the background and installed when you quit. You can also install and relaunch immediately.";
+
+// Client usage providers
+"安装并登录支持的工具后刷新，支持 Devin 和 DeepSeek Harness。" = "Install and sign in to a supported tool, then refresh. Devin and DeepSeek Harness are supported.";
+"可用余额" = "Available Balance";
+"赠金余额" = "Granted Balance";
+"充值余额" = "Topped-up Balance";
+"日额度" = "Daily Quota";
+"套餐 ACU" = "Plan ACUs";
+"DeepSeek 当前余额不足以调用 API" = "DeepSeek currently has insufficient balance for API calls.";
+"用量网络请求失败，请稍后重试" = "Usage network request failed. Try again later.";
+"用量接口返回无效响应" = "The usage service returned an invalid response.";
+"用量接口响应过大" = "The usage response is too large.";
+"用量接口地址不受支持" = "This usage endpoint is not supported.";
+"客户端登录已过期，请重新登录后刷新" = "Your client session has expired. Sign in again, then refresh.";
+"当前账号没有查询用量的权限" = "This account does not have permission to query usage.";
+"用量请求过于频繁，请稍后重试" = "Too many usage requests. Try again later.";
+"未找到 Devin 客户端登录数据，请先安装并登录 Devin" = "Devin login data was not found. Install Devin and sign in first.";
+"无法读取 Devin 客户端登录状态" = "Unable to read the Devin client login state.";
+"Devin 客户端登录数据格式无效" = "The Devin client login data is invalid.";
+"请在 Devin 客户端登录后刷新" = "Sign in to Devin Desktop, then refresh.";
+"暂不支持此 Devin 客户端服务地址" = "This Devin client server address is not supported yet.";
+"Devin 客户端暂未提供可显示的额度" = "Devin has not provided any displayable allowance.";
+"Devin 客户端用量数据格式无效" = "The Devin client usage data is invalid.";
+"请在 DeepSeek Harness 登录或配置 DeepSeek API Key" = "Sign in to DeepSeek Harness or configure its DeepSeek API key.";
+"DeepSeek Harness 凭据文件权限或格式不安全" = "The DeepSeek Harness credential file has unsafe permissions or format.";
+"DeepSeek Harness 凭据格式不受支持" = "The DeepSeek Harness credential format is not supported.";
+"DeepSeek Harness 余额数据格式无效" = "The DeepSeek Harness balance data is invalid.";
+"DeepSeek Harness 登录已过期，请重新登录" = "Your DeepSeek Harness session has expired. Sign in again.";
+"DeepSeek 未返回余额" = "DeepSeek did not return any balance.";
+"DeepSeek 余额币种无效" = "DeepSeek returned an invalid balance currency.";
+"DeepSeek 余额数值无效" = "DeepSeek returned an invalid balance amount.";
+"打开 Devin 客户端" = "Open Devin Desktop";
+"打开 DeepSeek Harness" = "Open DeepSeek Harness";
+
+// Devin billing models
+"美元用量" = "Dollar Usage";
+"套餐 ACU（不限量）" = "Plan ACUs (Unlimited)";
+"美元用量（不限量）" = "Dollar Usage (Unlimited)";
+"Prompt Credits（不限量）" = "Prompt Credits (Unlimited)";
+"Flow Credits（不限量）" = "Flow Credits (Unlimited)";
+"加购 Credits（不限量）" = "Add-on Credits (Unlimited)";
+"共享按量余额" = "Shared On-Demand Balance";
+"额外消费余额" = "Extra Usage Balance";
+"当前套餐未返回可显示的用量，请在 Devin 客户端查看。" = "This plan has not returned displayable usage. Check the Devin client.";
+"usage.quantity_limit" = "Limit %@ %@";

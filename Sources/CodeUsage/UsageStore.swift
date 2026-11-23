@@ -10,7 +10,9 @@ final class UsageStore: ObservableObject {
         .cursor: ProviderDisplayState(),
         .claude: ProviderDisplayState(),
         .kiro: ProviderDisplayState(),
-        .qoder: ProviderDisplayState()
+        .qoder: ProviderDisplayState(),
+        .devin: ProviderDisplayState(),
+        .deepseek: ProviderDisplayState()
     ]
     @Published private(set) var installedProviders = ProviderInstallation.installedProviders()
     @Published private(set) var archivedProviders: Set<ProviderKind>
@@ -30,6 +32,8 @@ final class UsageStore: ObservableObject {
     private let claude = ClaudeCodeProvider()
     private let kiro = KiroProvider()
     private let qoder = QoderProvider()
+    private let devin = DevinProvider()
+    private let deepseek = DeepSeekProvider()
     private let cloudSync = CloudUsageSyncService()
     private var refreshLoop: Task<Void, Never>?
     private var cloudSyncTask: Task<Void, Never>?
@@ -145,6 +149,13 @@ final class UsageStore: ObservableObject {
             })
         }
 
+        if providersToRefresh.contains(.devin) {
+            tasks.append(Task { await self.capture(provider: .devin) { try await self.devin.fetch() } })
+        }
+        if providersToRefresh.contains(.deepseek) {
+            tasks.append(Task { await self.capture(provider: .deepseek) { try await self.deepseek.fetch() } })
+        }
+
         var successfulSnapshots: [ProviderSnapshot] = []
         for task in tasks {
             let result = await task.value
@@ -155,6 +166,9 @@ final class UsageStore: ObservableObject {
             case .failure(let failure):
                 var state = states[failure.provider] ?? ProviderDisplayState()
                 state.errorMessage = failure.message
+                if failure.requiresSignIn && (failure.provider == .devin || failure.provider == .deepseek) {
+                    state.snapshot = nil
+                }
                 state.isStale = state.snapshot != nil
                 state.requiresSignIn = failure.requiresSignIn
                 states[failure.provider] = state
@@ -326,6 +340,10 @@ final class UsageStore: ObservableObject {
                     ? L10n.format("menu.updating", provider.title)
                     : L10n.format("menu.no_data", provider.title)
             }
+            if !metric.showsProgress, let snapshot {
+                let value = UsageMetricDisplayFormatter.valueText(metric, provider: provider, snapshot: snapshot) ?? "–"
+                return "\(provider.title) \(L10n.userFacing(metric.title)) \(value)"
+            }
             if provider == .cursor, metric.id == "on_demand_personal" {
                 return L10n.format(
                     metric.allowsLimitEditing
@@ -354,14 +372,18 @@ final class UsageStore: ObservableObject {
     func remainingText(for provider: ProviderKind) -> String {
         let state = state(for: provider)
         if let metric = state.snapshot?.primaryMetric {
+            if !metric.showsProgress {
+                return UsageMetricDisplayFormatter.compactValueText(metric) ?? "–"
+            }
             return "\(Int(metric.remainingPercent.rounded()))%"
         }
         return isRefreshing ? "…" : "–"
     }
 
     var lowestRemainingText: String {
-        let percentages = visibleMenuBarProviders.compactMap {
-            state(for: $0).snapshot?.primaryMetric?.remainingPercent
+        let percentages: [Double] = visibleMenuBarProviders.compactMap {
+            guard let metric = state(for: $0).snapshot?.primaryMetric, metric.showsProgress else { return nil }
+            return metric.remainingPercent
         }
         if let minimum = percentages.min() {
             return "\(Int(minimum.rounded()))%"

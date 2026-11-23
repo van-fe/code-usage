@@ -32,7 +32,7 @@ enum SubscriptionSimulation {
         now: Date = Date()
     ) -> [ProviderKind: ProviderDisplayState] {
         let normalized = category == .unknown ? SubscriptionCategory.freeTrial : category
-        let snapshots: [ProviderSnapshot]
+        var snapshots: [ProviderSnapshot]
         switch normalized {
         case .freeTrial:
             snapshots = freeTrialSnapshots(now: now)
@@ -45,9 +45,48 @@ enum SubscriptionSimulation {
         case .unknown:
             snapshots = []
         }
+        snapshots += [
+            devinSnapshot(for: normalized, now: now),
+            ProviderSnapshot(provider: .deepseek, planName: "Harness Demo", metrics: [
+                UsageMetric(id: "balance_CNY", title: "可用余额", usedPercent: 0, deadlineAt: nil,
+                            value: .quantity(used: nil, limit: nil, remaining: 110, unit: "CNY"), showsProgress: false)
+            ], fetchedAt: now, note: "示例数据", subscriptionCategory: category)
+        ]
         return Dictionary(uniqueKeysWithValues: snapshots.map {
             ($0.provider, ProviderDisplayState(snapshot: $0))
         })
+    }
+
+    private static func devinSnapshot(for category: SubscriptionCategory, now: Date) -> ProviderSnapshot {
+        let info: [String: Any]
+        var plan: [String: Any]
+        switch category {
+        case .freeTrial, .unknown:
+            info = ["planName": "Free"]
+            plan = [:]
+        case .individual:
+            info = ["planName": "Pro", "billingStrategy": 2]
+            plan = ["dailyQuotaRemainingPercent": 76, "weeklyQuotaRemainingPercent": 62,
+                    "dailyQuotaResetAtUnix": now.addingTimeInterval(3600).timeIntervalSince1970,
+                    "weeklyQuotaResetAtUnix": now.addingTimeInterval(86400).timeIntervalSince1970,
+                    "overageBalanceMicros": 12500000]
+        case .team:
+            info = ["planName": "Teams", "billingStrategy": 2, "isTeams": true,
+                    "hideDailyQuota": true, "hideWeeklyQuota": true]
+            plan = ["dollarsConsumed": 24.5, "dollarsLimit": 100, "overageBalanceMicros": 55500000]
+        case .enterprise:
+            info = ["planName": "Enterprise", "billingStrategy": 3, "isEnterprise": true]
+            plan = ["acuConsumed": 125.5, "acuLimit": 500, "dollarsConsumed": 31.25, "dollarsLimit": 200]
+        }
+        plan["planInfo"] = info
+        do {
+            let data = try JSONSerialization.data(withJSONObject: ["userStatus": ["planStatus": plan]])
+            let mapped = try DevinProvider.map(data: data, now: now)
+            return ProviderSnapshot(provider: .devin, planName: mapped.planName, metrics: mapped.metrics,
+                fetchedAt: now, note: mapped.note, subscriptionCategory: category)
+        } catch {
+            preconditionFailure("Invalid Devin subscription simulation")
+        }
     }
 
     private static func category(from value: String) -> SubscriptionCategory? {
