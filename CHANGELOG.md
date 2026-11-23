@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/van-fe/code-usage/compare/v0.13.3...v0.14.0) (2026-11-23)
+
+
+### Features
+
+* support Devin and DeepSeek client usage across billing plans ([88d53e7](https://github.com/van-fe/code-usage/commit/88d53e757661aee8dec6d68306fe55dbf146975e))
+
 ## [0.13.3](https://github.com/van-fe/code-usage/compare/v0.13.2...v0.13.3) (2026-11-03)
 
 
